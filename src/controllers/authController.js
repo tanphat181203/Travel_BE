@@ -33,7 +33,7 @@ export const register = async (req, res, next) => {
     await sendEmail(
       email,
       'Verify Your Email',
-      `Verify your email: ${process.env.BASE_URL}:${process.env.PORT}/api/auth/verify-email/${emailVerificationToken}`
+      `Verify your email: ${process.env.BASE_URL}/api/auth/verify-email/${emailVerificationToken}`
     );
     res
       .status(201)
@@ -83,18 +83,17 @@ export const forgotPassword = async (req, res, next) => {
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     const resetToken = generateToken({ id: user.id });
-    const resetPasswordExpires = new Date(Date.now() + 3600000);
 
     await User.findByIdAndUpdate(user.id, {
       resetPasswordToken: resetToken,
-      resetPasswordExpires,
     });
 
     await sendEmail(
       email,
       'Reset Your Password',
-      `Reset your password: ${process.env.BASE_URL}:${process.env.PORT}/api/auth/reset-password/${resetToken}`
+      `Reset your password: ${process.env.BASE_URL}/api/auth/reset-password/${resetToken}`
     );
+
     res.json({ message: 'Password reset email sent' });
   } catch (error) {
     next(error);
@@ -110,21 +109,13 @@ export const resetPassword = async (req, res, next) => {
       resetPasswordToken: token,
     });
 
-    if (
-      !user ||
-      !user.reset_password_expires ||
-      new Date(user.reset_password_expires) < new Date()
-    )
-      return res
-        .status(400)
-        .json({ message: 'Invalid or expired reset token' });
+    if (!user) return res.status(400).json({ message: 'Invalid reset token' });
 
     const hashedPassword = await hashPassword(password);
 
     await User.findByIdAndUpdate(user.id, {
       password: hashedPassword,
       resetPasswordToken: null,
-      resetPasswordExpires: null,
     });
 
     res.json({ message: 'Password reset successful' });

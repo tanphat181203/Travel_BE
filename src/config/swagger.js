@@ -11,7 +11,7 @@ const options = {
     },
     servers: [
       {
-        url: `${process.env.BASE_URL}:${process.env.PORT}`,
+        url: `${process.env.BASE_URL}`,
         description: 'Development server',
       },
     ],

@@ -3,16 +3,15 @@ import User from '../models/User.js';
 export const getAllUsers = async (req, res, next) => {
   try {
     const users = await User.find({ role: 'user' });
-    
-    const sanitizedUsers = users.map(user => {
+
+    const sanitizedUsers = users.map((user) => {
       const userObj = { ...user };
       delete userObj.password;
       delete userObj.reset_password_token;
-      delete userObj.reset_password_expires;
       delete userObj.email_verification_token;
       return userObj;
     });
-    
+
     res.json(sanitizedUsers);
   } catch (error) {
     next(error);
