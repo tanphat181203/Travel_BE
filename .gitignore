@@ -17,3 +17,6 @@ logs/
 dist/
 out/
 build/
+
+# Firebase service account key
+serviceAccountKey.json

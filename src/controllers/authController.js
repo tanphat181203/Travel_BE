@@ -134,6 +134,7 @@ export const verifyEmail = async (req, res, next) => {
     await User.findByIdAndUpdate(user.id, {
       is_email_verified: true,
       email_verification_token: null,
+      status: 'active',
     });
 
     res.json({ message: 'Email verified successfully' });

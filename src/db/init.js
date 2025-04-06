@@ -26,4 +26,4 @@ const initializeDatabase = async () => {
   }
 };
 
-export default initializeDatabase; 
+export default initializeDatabase;
