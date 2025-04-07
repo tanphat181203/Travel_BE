@@ -22,7 +22,7 @@ passport.use(
             google_id: profile.id,
             email,
             name: profile.displayName,
-            is_email_verified: true,
+            status: 'active',
           });
         } else if (!user.google_id) {
           user = await User.findByIdAndUpdate(user.id, {

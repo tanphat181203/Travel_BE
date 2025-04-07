@@ -1,6 +1,6 @@
 import User from '../models/User.js';
 
-const adminMiddleware = async (req, res, next) => {
+export const adminMiddleware = async (req, res, next) => {
   try {
     const user = await User.findById(req.userId);
     if (!user) {
@@ -18,5 +18,3 @@ const adminMiddleware = async (req, res, next) => {
     next(error);
   }
 };
-
-export default adminMiddleware;

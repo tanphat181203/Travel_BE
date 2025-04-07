@@ -5,14 +5,13 @@ CREATE TABLE IF NOT EXISTS Users (
     password VARCHAR(255),
     name VARCHAR(255),
     google_id VARCHAR(255),
-    is_email_verified BOOLEAN DEFAULT false,
     email_verification_token VARCHAR(255),
     reset_password_token VARCHAR(255),
     role VARCHAR(20) DEFAULT 'user',
     avatar_url VARCHAR(255),
-    phone_number VARCHAR(20),
+    phone_number VARCHAR(20) UNIQUE,
     address VARCHAR(255),
-    status VARCHAR(20)
+    status VARCHAR(20) DEFAULT 'pending_verification'
 );
 
 -- 2. SubscriptionPackage
@@ -47,8 +46,8 @@ CREATE TABLE IF NOT EXISTS Departure (
     tour_id INTEGER NOT NULL REFERENCES Tour(tour_id),
     start_date DATE NOT NULL,
     price_adult DECIMAL(10,2) NOT NULL,
-    price_child DECIMAL(10,2) NOT NULL,
-    price_child_under_3 DECIMAL(10,2) NOT NULL,
+    price_child_120_140 DECIMAL(10,2) NOT NULL,
+    price_child_100_120 DECIMAL(10,2) NOT NULL,
     availability BOOLEAN DEFAULT true,
     description TEXT
 );
@@ -99,8 +98,8 @@ CREATE TABLE IF NOT EXISTS Booking (
     departure_id INTEGER NOT NULL REFERENCES Departure(departure_id),
     user_id INTEGER NOT NULL REFERENCES Users(id),
     num_adults INTEGER NOT NULL,
-    num_children INTEGER NOT NULL,
-    num_children_under_3 INTEGER NOT NULL,
+    num_children_120_140 INTEGER NOT NULL,
+    num_children_100_120 INTEGER NOT NULL,
     total_price DECIMAL(10,2) NOT NULL,
     booking_status VARCHAR(50) NOT NULL,
     special_requests TEXT,
@@ -140,6 +139,7 @@ CREATE TABLE IF NOT EXISTS Checkout (
 CREATE TABLE IF NOT EXISTS Promotion (
     promotion_id SERIAL PRIMARY KEY,
     description TEXT NOT NULL,
+    type VARCHAR(50) NOT NULL DEFAULT 'percent',
     discount DECIMAL(5,2) NOT NULL,
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,

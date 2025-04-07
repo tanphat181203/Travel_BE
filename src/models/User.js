@@ -113,7 +113,7 @@ class User {
       snakeCaseData[snakeCaseKey] = value;
     }
 
-    if (!snakeCaseData.is_email_verified) snakeCaseData.is_email_verified = false;
+    if (!snakeCaseData.status) snakeCaseData.status = 'pending_verification';
     if (!snakeCaseData.role) snakeCaseData.role = 'user';
 
     Object.entries(snakeCaseData).forEach(([key, value]) => {

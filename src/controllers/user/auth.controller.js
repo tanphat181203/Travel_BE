@@ -1,10 +1,10 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import User from '../models/User.js';
-import { hashPassword, comparePassword } from '../utils/passwordHash.js';
-import { generateToken } from '../utils/jwtHelper.js';
-import sendEmail from '../services/emailService.js';
+import User from '../../models/User.js';
+import { hashPassword, comparePassword } from '../../utils/passwordHash.js';
+import { generateToken } from '../../utils/jwtHelper.js';
+import sendEmail from '../../services/emailService.js';
 import passport from 'passport';
 
 export const register = async (req, res, next) => {
@@ -28,12 +28,13 @@ export const register = async (req, res, next) => {
       name,
       emailVerificationToken,
       role: 'user',
+      status: 'pending_verification',
     });
 
     await sendEmail(
       email,
       'Verify Your Email',
-      `Verify your email: ${process.env.BASE_URL}/api/auth/verify-email/${emailVerificationToken}`
+      `Verify your email: ${process.env.BASE_URL}/api/users/verify-email/${emailVerificationToken}`
     );
     res
       .status(201)
@@ -47,7 +48,7 @@ export const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
     const user = await User.findByEmail(email);
-    if (!user || !user.is_email_verified)
+    if (!user || user.status === 'pending_verification')
       return res
         .status(401)
         .json({ message: 'Invalid credentials or email not verified' });
@@ -91,7 +92,7 @@ export const forgotPassword = async (req, res, next) => {
     await sendEmail(
       email,
       'Reset Your Password',
-      `Reset your password: ${process.env.BASE_URL}/api/auth/reset-password/${resetToken}`
+      `Reset your password: ${process.env.BASE_URL}/api/users/reset-password/${resetToken}`
     );
 
     res.json({ message: 'Password reset email sent' });
@@ -132,8 +133,7 @@ export const verifyEmail = async (req, res, next) => {
       return res.status(400).json({ message: 'Invalid verification token' });
 
     await User.findByIdAndUpdate(user.id, {
-      is_email_verified: true,
-      email_verification_token: null,
+      emailVerificationToken: null,
       status: 'active',
     });
 

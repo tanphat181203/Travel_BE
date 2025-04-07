@@ -1,5 +1,5 @@
-import User from '../models/User.js';
-import { uploadToFirebase } from '../utils/uploadHandler.js';
+import User from '../../models/User.js';
+import { uploadToFirebase } from '../../utils/uploadHandler.js';
 
 export const getProfile = async (req, res, next) => {
   try {
@@ -31,13 +31,16 @@ export const updateProfile = async (req, res, next) => {
     if (name) updates.name = name;
     if (phone_number) updates.phone_number = phone_number;
     if (address) updates.address = address;
-    
+
     if (req.file) {
       try {
         const avatarUrl = await uploadToFirebase(req.file, 'avatars');
         updates.avatar_url = avatarUrl;
       } catch (uploadError) {
-        return res.status(400).json({ message: 'Error uploading avatar', error: uploadError.message });
+        return res.status(400).json({
+          message: 'Error uploading avatar',
+          error: uploadError.message,
+        });
       }
     }
 
@@ -53,9 +56,8 @@ export const updateProfile = async (req, res, next) => {
       phone_number: updates.phone_number || user.phone_number,
       address: updates.address || user.address,
       status: user.status,
-      is_email_verified: user.is_email_verified
     };
-    
+
     res.json(sanitizedUser);
   } catch (error) {
     next(error);
