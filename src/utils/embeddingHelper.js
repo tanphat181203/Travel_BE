@@ -27,24 +27,21 @@ const generateTourText = (tour) => {
 }
 
 const formatEmbeddingForPgVector = (embeddingData) => {
-  const data =
-    typeof embeddingData === 'string'
-      ? JSON.parse(embeddingData)
-      : embeddingData;
+  let vector = embeddingData;
+  if (Array.isArray(vector[0])) {
+    vector = vector[0];
+  }
 
-  const numbersArray = data.map(Number);
-
-  return `[${numbersArray.join(',')}]`;
+  return '[' + vector.join(',') + ']';
 }
 
 export const generateEmbedding = async (tourData) => {
   try {
-    const response = await fetch(`${process.env.AI_SERVER_URL}/embedding`, {
+    const response = await fetch(`${process.env.AI_SERVER_URL}/embed`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${process.env.AI_SERVER_KEY}`,
-        'X-Github-Token': `${process.env.X_Github_Token}`,
       },
       body: JSON.stringify({
         text: generateTourText(tourData),
@@ -52,7 +49,7 @@ export const generateEmbedding = async (tourData) => {
     });
 
     const data = await response.json();
-    return formatEmbeddingForPgVector(data.embedding);
+    return formatEmbeddingForPgVector(data.embeddings);
   } catch (error) {
     console.error('Error generating embedding:', error);
     throw error;
