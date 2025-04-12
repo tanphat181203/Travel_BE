@@ -24,7 +24,7 @@ export const registerSeller = async (req, res, next) => {
     const hashedPassword = await hashPassword(password);
     const emailVerificationToken = generateToken({ email });
 
-    const seller = await User.create({
+    await User.create({
       email,
       password: hashedPassword,
       name,
@@ -38,7 +38,7 @@ export const registerSeller = async (req, res, next) => {
     await sendEmail(
       email,
       'Verify Your Seller Account Email',
-      `Thank you for registering as a seller. Please verify your email: ${process.env.BASE_URL}/api/sellers/verify-email/${emailVerificationToken}`
+      `Thank you for registering as a seller. Please verify your email: ${process.env.BASE_URL}/api/seller/auth/verify-email/${emailVerificationToken}`
     );
 
     res.status(201).json({
@@ -76,7 +76,15 @@ export const loginSeller = async (req, res, next) => {
       role: user.role,
     });
 
-    res.json({ token });
+    res.json({
+      token: token,
+      seller: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        avatar_url: user.avatar_url,
+      },
+    });
   } catch (error) {
     next(error);
   }
@@ -132,7 +140,7 @@ export const forgotSellerPassword = async (req, res, next) => {
     await sendEmail(
       email,
       'Reset Your Seller Account Password',
-      `Reset your seller account password: ${process.env.BASE_URL}/api/sellers/reset-password/${resetToken}`
+      `Reset your seller account password: ${process.env.BASE_URL}/api/seller/auth/reset-password/${resetToken}`
     );
 
     res.json({ message: 'Password reset email sent' });
@@ -168,6 +176,33 @@ export const resetSellerPassword = async (req, res, next) => {
     });
 
     res.json({ message: 'Seller password reset successful' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const changeSellerPassword = async (req, res, next) => {
+  try {
+    const { password, newPassword } = req.body;
+
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'Seller not found' });
+    }
+
+    const isMatch = await comparePassword(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    const hashedPassword = await hashPassword(newPassword);
+
+    await User.findByIdAndUpdate(user.id, {
+      password: hashedPassword,
+    });
+
+    res.json({ message: 'Seller password changed successfully' });
   } catch (error) {
     next(error);
   }

@@ -29,15 +29,15 @@ CREATE TABLE IF NOT EXISTS Tour (
     tour_id SERIAL PRIMARY KEY,
     seller_id INTEGER NOT NULL REFERENCES Users(id),
     title VARCHAR(255) NOT NULL,
-    duration DECIMAL(3,1) NOT NULL,
+    duration VARCHAR(255) NOT NULL,
     departure_location VARCHAR(255) NOT NULL,
     description TEXT,
     destination TEXT[],
     region INTEGER NOT NULL,
-    itinerary TEXT[],
+    itinerary JSONB,
     max_participants INTEGER NOT NULL,
     availability BOOLEAN DEFAULT true,
-    embedding vector(1024)
+    embedding vector(768)
 );
 
 -- 4. Departure
@@ -112,6 +112,7 @@ CREATE TABLE IF NOT EXISTS Images (
     tour_id INTEGER NOT NULL REFERENCES Tour(tour_id),
     image_url VARCHAR(255) NOT NULL,
     description TEXT,
+    is_cover BOOLEAN DEFAULT false,
     upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -1,8 +1,10 @@
 import User from '../../models/User.js';
 import { uploadToFirebase } from '../../utils/uploadHandler.js';
 
-export const getProfile = async (req, res, next) => {
+export const getUserProfile = async (req, res, next) => {
   try {
+    console.log('Fetching user profile for user ID:', req.userId);
+    
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
@@ -23,7 +25,7 @@ export const getProfile = async (req, res, next) => {
   }
 };
 
-export const updateProfile = async (req, res, next) => {
+export const updateUserProfile = async (req, res, next) => {
   try {
     const { name, phone_number, address } = req.body;
     const updates = {};
@@ -58,7 +60,10 @@ export const updateProfile = async (req, res, next) => {
       status: user.status,
     };
 
-    res.json(sanitizedUser);
+    res.json({
+      message: 'User profile updated successfully.',
+      user: sanitizedUser,
+    });
   } catch (error) {
     next(error);
   }

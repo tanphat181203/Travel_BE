@@ -6,12 +6,6 @@ export const getSellerProfile = async (req, res, next) => {
     const seller = await User.findById(req.userId);
     if (!seller) return res.status(404).json({ message: 'Seller not found' });
 
-    if (seller.role !== 'seller') {
-      return res
-        .status(403)
-        .json({ message: 'Access denied. Not a seller account.' });
-    }
-
     const sanitizedSeller = {
       id: seller.id,
       email: seller.email,
@@ -33,12 +27,6 @@ export const updateSellerProfile = async (req, res, next) => {
   try {
     const seller = await User.findById(req.userId);
     if (!seller) return res.status(404).json({ message: 'Seller not found' });
-
-    if (seller.role !== 'seller') {
-      return res
-        .status(403)
-        .json({ message: 'Access denied. Not a seller account.' });
-    }
 
     const { name, phone_number, address } = req.body;
     const updates = {};

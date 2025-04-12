@@ -1,6 +1,6 @@
 import User from '../../models/User.js';
 
-export const getAllUsers = async (req, res, next) => {
+export const listUsers = async (req, res, next) => {
   try {
     const users = await User.find({ role: 'user' });
 
@@ -17,6 +17,58 @@ export const getAllUsers = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getUserById = async (req, res, next) => {
+  try {
+    const userId = req.params.id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const sanitizedUser = { ...user };
+    delete sanitizedUser.password;
+    delete sanitizedUser.reset_password_token;
+    delete sanitizedUser.email_verification_token;
+
+    res.json(sanitizedUser);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateUser = async (req, res, next) => {
+  try {
+    const userId = req.params.id;
+    const { name, email, role, status } = req.body;
+
+    if (userId === req.userId) {
+      return res
+        .status(400)
+        .json({ message: 'Admins cannot update themselves' });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { name, email, role, status },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const sanitizedUser = { ...user };
+    delete sanitizedUser.password;
+    delete sanitizedUser.reset_password_token;
+    delete sanitizedUser.email_verification_token;
+
+    res.json(sanitizedUser);
+  } catch (error) {
+    next(error);
+  }
+}
 
 export const deleteUser = async (req, res, next) => {
   try {

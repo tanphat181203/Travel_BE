@@ -7,7 +7,7 @@ import { generateToken } from '../../utils/jwtHelper.js';
 import sendEmail from '../../services/emailService.js';
 import passport from 'passport';
 
-export const register = async (req, res, next) => {
+export const registerUser = async (req, res, next) => {
   try {
     const { email, password, name } = req.body;
     if (!email || !password)
@@ -34,7 +34,7 @@ export const register = async (req, res, next) => {
     await sendEmail(
       email,
       'Verify Your Email',
-      `Verify your email: ${process.env.BASE_URL}/api/users/verify-email/${emailVerificationToken}`
+      `Verify your email: ${process.env.BASE_URL}/api/user/auth/verify-email/${emailVerificationToken}`
     );
     res
       .status(201)
@@ -44,7 +44,7 @@ export const register = async (req, res, next) => {
   }
 };
 
-export const login = async (req, res, next) => {
+export const loginUser = async (req, res, next) => {
   try {
     const { email, password } = req.body;
     const user = await User.findByEmail(email);
@@ -58,7 +58,15 @@ export const login = async (req, res, next) => {
       return res.status(401).json({ message: 'Invalid credentials' });
 
     const token = generateToken({ id: user.id, role: user.role });
-    res.json({ token });
+    res.json({
+      token: token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        avatar_url: user.avatar_url,
+      },
+    });
   } catch (error) {
     next(error);
   }
@@ -73,7 +81,10 @@ export const googleCallback = (req, res, next) => {
     if (err || !user)
       return res.status(400).json({ message: 'Google login failed' });
     const token = generateToken({ id: user.id, role: user.role });
-    res.json({ token });
+    res.json({
+      token: token,
+      user: { id: user.id, name: user.name, email: user.email },
+    });
   })(req, res, next);
 };
 
@@ -92,7 +103,7 @@ export const forgotPassword = async (req, res, next) => {
     await sendEmail(
       email,
       'Reset Your Password',
-      `Reset your password: ${process.env.BASE_URL}/api/users/reset-password/${resetToken}`
+      `Reset your password: ${process.env.BASE_URL}/api/user/auth/reset-password/${resetToken}`
     );
 
     res.json({ message: 'Password reset email sent' });
@@ -138,6 +149,28 @@ export const verifyEmail = async (req, res, next) => {
     });
 
     res.json({ message: 'Email verified successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const changePassword = async (req, res, next) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const isMatch = await comparePassword(oldPassword, user.password);
+    if (!isMatch)
+      return res.status(401).json({ message: 'Old password is incorrect' });
+
+    const hashedPassword = await hashPassword(newPassword);
+
+    await User.findByIdAndUpdate(user.id, {
+      password: hashedPassword,
+    });
+
+    res.json({ message: 'Password changed successfully' });
   } catch (error) {
     next(error);
   }
