@@ -85,9 +85,9 @@ class User {
 
     values.push(id);
     const query = `
-      UPDATE Users 
-      SET ${setClauses.join(', ')} 
-      WHERE id = $${paramIndex} 
+      UPDATE Users
+      SET ${setClauses.join(', ')}
+      WHERE id = $${paramIndex}
       RETURNING *
     `;
 
@@ -96,9 +96,30 @@ class User {
   }
 
   static async findByIdAndDelete(id) {
-    const query = 'DELETE FROM Users WHERE id = $1 RETURNING *';
-    const result = await this.executeQuery(query, [id]);
-    return result.rows[0];
+    try {
+      const user = await this.findById(id);
+      if (!user) return null;
+
+      const query = 'DELETE FROM Users WHERE id = $1 RETURNING *';
+      const result = await this.executeQuery(query, [id]);
+      const deletedUser = result.rows[0];
+
+      if (deletedUser && deletedUser.avatar_url) {
+        try {
+          const { deleteFromFirebase } = await import(
+            '../utils/uploadHandler.js'
+          );
+          await deleteFromFirebase(deletedUser.avatar_url);
+        } catch (error) {
+          console.error(`Error deleting avatar for user ${id}:`, error);
+        }
+      }
+
+      return deletedUser;
+    } catch (error) {
+      console.error(`Error deleting user ${id}:`, error);
+      throw error;
+    }
   }
 
   static async create(userData) {
@@ -124,8 +145,8 @@ class User {
     });
 
     const query = `
-      INSERT INTO Users (${fields.join(', ')}) 
-      VALUES (${placeholders.join(', ')}) 
+      INSERT INTO Users (${fields.join(', ')})
+      VALUES (${placeholders.join(', ')})
       RETURNING *
     `;
 

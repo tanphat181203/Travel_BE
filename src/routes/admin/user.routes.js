@@ -172,7 +172,7 @@ router.put('/:id', authenticateJWT, requireAdmin, userController.updateUser);
  *     tags:
  *       - Admin - User Management
  *     summary: Delete user
- *     description: Delete a user (admin access only)
+ *     description: Delete a user and their avatar from Firebase Storage (admin access only)
  *     security:
  *       - BearerAuth: []
  *     parameters:

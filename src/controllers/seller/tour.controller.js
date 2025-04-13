@@ -1,6 +1,9 @@
 import Tour from '../../models/Tour.js';
 import { generateEmbedding } from '../../utils/embeddingHelper.js';
+import { uploadToFirebase } from '../../utils/uploadHandler.js';
+import { checkTourOwnership } from '../../utils/tourHelper.js';
 
+// Tour controllers
 export const createTour = async (req, res, next) => {
   try {
     const seller_id = req.userId;
@@ -159,6 +162,69 @@ export const searchTours = async (req, res, next) => {
     });
 
     return res.status(200).json(sanitizedTours);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Tour image controllers
+export const uploadTourImages = async (req, res, next) => {
+  try {
+    const tourId = req.params.id;
+    const sellerId = req.userId;
+
+    const tour = await checkTourOwnership(tourId, sellerId);
+    if (!tour.success) {
+      return res.status(tour.status).json({ message: tour.message });
+    }
+
+    const uploadPromises = req.files.map((file) =>
+      uploadToFirebase(file, `tours/${tourId}`)
+    );
+    const imageUrls = await Promise.all(uploadPromises);
+
+    const savedImages = await Tour.addImages(tourId, imageUrls);
+
+    res.status(201).json(savedImages);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const setCoverImage = async (req, res, next) => {
+  try {
+    const { id: tourId, imageId } = req.params;
+    const sellerId = req.userId;
+
+    const tour = await checkTourOwnership(tourId, sellerId);
+    if (!tour.success) {
+      return res.status(tour.status).json({ message: tour.message });
+    }
+
+    const updatedImage = await Tour.setCoverImage(tourId, imageId);
+    if (!updatedImage) {
+      return res.status(404).json({ message: 'Image not found' });
+    }
+
+    res.status(200).json(updatedImage);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteTourImage = async (req, res, next) => {
+  try {
+    const { id: tourId, imageId } = req.params;
+    const sellerId = req.userId;
+
+    const tour = await checkTourOwnership(tourId, sellerId);
+    if (!tour.success) {
+      return res.status(tour.status).json({ message: tour.message });
+    }
+
+    await Tour.deleteImage(tourId, imageId);
+
+    res.status(200).json({ message: 'Image deleted successfully' });
   } catch (error) {
     next(error);
   }

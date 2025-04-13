@@ -10,6 +10,7 @@ export const getTourById = async (req, res, next) => {
       return res.status(404).json({ message: 'Tour not found' });
     }
 
+    // Remove sensitive data
     delete tour.embedding;
 
     return res.status(200).json(tour);
@@ -27,6 +28,7 @@ export const searchTours = async (req, res, next) => {
       return res.status(404).json({ message: 'No tours found' });
     }
 
+    // Remove sensitive data
     tours.forEach((tour) => {
       delete tour.embedding;
     });
@@ -46,6 +48,14 @@ export const semanticSearch = async (req, res, next) => {
     }
 
     const tours = await Tour.semanticSearch(query);
+
+    if (tours.length === 0) {
+      return res
+        .status(404)
+        .json({ message: 'No tours found matching your query' });
+    }
+
+    // Remove sensitive data
     tours.forEach((tour) => {
       delete tour.embedding;
     });

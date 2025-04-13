@@ -117,7 +117,7 @@ router.get(
  *     tags:
  *       - Admin - Seller Management
  *     summary: Delete seller
- *     description: Delete a seller (admin access only)
+ *     description: Delete a seller and their avatar from Firebase Storage (admin access only)
  *     security:
  *       - BearerAuth: []
  *     parameters:

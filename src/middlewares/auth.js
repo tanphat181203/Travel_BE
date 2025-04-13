@@ -3,33 +3,24 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
+const JWT_SECRET = process.env.JWT_SECRET;
 
-/**
- * Middleware to authenticate JWT tokens
- * Extracts the JWT token from Authorization header
- * Verifies the token and adds user data to the request object
- */
 export const authenticateJWT = (req, res, next) => {
   try {
-    // Get the authorization header
     const authHeader = req.headers.authorization;
 
     if (!authHeader) {
       return res.status(401).json({ message: 'Authorization header missing' });
     }
 
-    // Extract the token (remove 'Bearer ' prefix)
     const token = authHeader.split(' ')[1];
 
     if (!token) {
       return res.status(401).json({ message: 'Token missing' });
     }
 
-    // Verify the token
     const decoded = jwt.verify(token, JWT_SECRET);
 
-    // Add user data to request object
     req.userId = decoded.userId;
     req.role = decoded.role;
 
@@ -48,9 +39,6 @@ export const authenticateJWT = (req, res, next) => {
   }
 };
 
-/**
- * Middleware to check if user has admin role
- */
 export const requireAdmin = (req, res, next) => {
   if (req.role !== 'admin') {
     return res
@@ -60,9 +48,6 @@ export const requireAdmin = (req, res, next) => {
   next();
 };
 
-/**
- * Middleware to check if user has seller role
- */
 export const requireSeller = (req, res, next) => {
   if (req.role !== 'seller') {
     return res
@@ -72,9 +57,6 @@ export const requireSeller = (req, res, next) => {
   next();
 };
 
-/**
- * Middleware to check if user has user role
- */
 export const requireUser = (req, res, next) => {
   if (req.role !== 'user') {
     return res

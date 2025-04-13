@@ -1,12 +1,6 @@
-/**
- * Global error handling middleware
- * Captures errors thrown in routes and controllers
- * Returns appropriate error responses
- */
 const errorHandler = (err, req, res, next) => {
   console.error('Error:', err);
 
-  // Custom error handling based on error types
   if (err.name === 'ValidationError') {
     return res.status(400).json({
       message: 'Validation Error',
@@ -32,16 +26,13 @@ const errorHandler = (err, req, res, next) => {
     });
   }
 
-  // Default server error
   const statusCode = err.statusCode || 500;
   const message = err.message || 'Internal Server Error';
 
-  // In production, don't send detailed error information
   const errorResponse = {
     message: message,
   };
 
-  // In development, include the stack trace
   if (process.env.NODE_ENV !== 'production') {
     errorResponse.stack = err.stack;
   }

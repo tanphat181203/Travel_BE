@@ -1,6 +1,7 @@
 import express from 'express';
 import * as profileController from '../../controllers/seller/profile.controller.js';
 import { authenticateJWT, requireSeller } from '../../middlewares/auth.js';
+import { upload } from '../../utils/uploadHandler.js';
 
 const router = express.Router();
 
@@ -62,13 +63,13 @@ router.get(
  *     tags:
  *       - Seller Profile
  *     summary: Update seller profile
- *     description: Update current seller's profile information
+ *     description: Update current seller's profile information, including optional avatar upload
  *     security:
  *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             properties:
@@ -78,8 +79,10 @@ router.get(
  *                 type: string
  *               address:
  *                 type: string
- *               avatar_url:
+ *               avatar:
  *                 type: string
+ *                 format: binary
+ *                 description: Profile image file
  *     responses:
  *       200:
  *         description: Profile updated successfully
@@ -120,6 +123,7 @@ router.put(
   '/',
   authenticateJWT,
   requireSeller,
+  upload.single('avatar'),
   profileController.updateSellerProfile
 );
 
