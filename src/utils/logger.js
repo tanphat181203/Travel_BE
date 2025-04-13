@@ -1,9 +1,7 @@
-import winston from 'winston';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import winston from 'winston';
 
 const levels = {
   error: 0,
@@ -13,17 +11,15 @@ const levels = {
   debug: 4,
 };
 
-const colors = {
-  error: 'red',
-  warn: 'yellow',
-  info: 'green',
-  http: 'magenta',
-  debug: 'blue',
-};
+const productionFormat = winston.format.combine(
+  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
+  winston.format.uncolorize(),
+  winston.format.printf(
+    (info) => `${info.timestamp} ${info.level}: ${info.message}`
+  )
+);
 
-winston.addColors(colors);
-
-const format = winston.format.combine(
+const developmentFormat = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
   winston.format.colorize({ all: true }),
   winston.format.printf(
@@ -31,24 +27,11 @@ const format = winston.format.combine(
   )
 );
 
-const transports = [
-  new winston.transports.Console(),
-  
-  new winston.transports.File({
-    filename: path.join(__dirname, '../logs/error.log'),
-    level: 'error',
-  }),
-  
-  new winston.transports.File({ 
-    filename: path.join(__dirname, '../logs/combined.log') 
-  }),
-];
-
 const logger = winston.createLogger({
-  level: process.env.NODE_ENV === 'development' ? 'debug' : 'info',
+  level: process.env.NODE_ENV === 'production' ? 'info' : 'http',
   levels,
-  format,
-  transports,
+  format: process.env.NODE_ENV === 'production' ? productionFormat : developmentFormat,
+  transports: [new winston.transports.Console()],
 });
 
 export default logger;

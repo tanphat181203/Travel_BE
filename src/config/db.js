@@ -3,6 +3,7 @@ dotenv.config();
 
 import pkg from 'pg';
 const { Pool } = pkg;
+import logger from '../utils/logger.js';
 
 const pool = new Pool({
   user: process.env.PGUSER,
@@ -18,7 +19,7 @@ const pool = new Pool({
 });
 
 pool.on('error', (err) => {
-  console.error('Unexpected error on idle client', err);
+  logger.error('Unexpected error on idle client', err);
 });
 
 const connectDB = async () => {
@@ -26,17 +27,17 @@ const connectDB = async () => {
   while (retries) {
     try {
       const client = await pool.connect();
-      console.log('PostgreSQL connected');
+      logger.info('PostgreSQL connected');
       client.release();
       return;
     } catch (error) {
-      console.error('PostgreSQL connection error:', error);
+      logger.error('PostgreSQL connection error:', error);
       retries -= 1;
-      console.log(`Retries left: ${retries}`);
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      logger.info(`Retries left: ${retries}`);
+      await new Promise((resolve) => setTimeout(resolve, 5000));
     }
   }
-  console.error('Failed to connect to PostgreSQL after multiple retries');
+  logger.error('Failed to connect to PostgreSQL after multiple retries');
   process.exit(1);
 };
 
