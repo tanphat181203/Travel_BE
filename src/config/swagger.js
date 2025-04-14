@@ -73,6 +73,18 @@ const options = {
         description: 'Endpoints for managing seller profile information',
       },
       {
+        name: 'User - Booking Management',
+        description: 'Endpoints for users to create and manage their bookings',
+      },
+      {
+        name: 'User - Payment Management',
+        description: 'Endpoints for users to process payments for bookings',
+      },
+      {
+        name: 'User - Invoice Management',
+        description: 'Endpoints for users to view and manage their invoices',
+      },
+      {
         name: 'Seller - Tour Management',
         description: 'Endpoints for sellers to create and manage their tours',
       },

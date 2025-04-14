@@ -81,8 +81,12 @@ router.post('/register', authController.registerUser);
  *             schema:
  *               type: object
  *               properties:
- *                 token:
+ *                 accessToken:
  *                   type: string
+ *                   description: JWT access token for authentication (short-lived)
+ *                 refreshToken:
+ *                   type: string
+ *                   description: JWT refresh token for obtaining new access tokens (long-lived)
  *                 user:
  *                   type: object
  *                   properties:
@@ -296,5 +300,55 @@ router.put('/change-password', authenticateJWT, authController.changePassword);
  *         description: Server error
  */
 router.get('/verify-email/:token', authController.verifyEmail);
+
+/**
+ * @swagger
+ * /user/auth/refresh-token:
+ *   post:
+ *     tags:
+ *       - User Authentication
+ *     summary: Refresh access token
+ *     description: Get a new access token using a refresh token
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - refreshToken
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: New access token generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 accessToken:
+ *                   type: string
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                     name:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                       format: email
+ *                     avatar_url:
+ *                       type: string
+ *       400:
+ *         description: Refresh token is required
+ *       401:
+ *         description: Invalid or expired refresh token
+ *       500:
+ *         description: Server error
+ */
+router.post('/refresh-token', authController.refreshToken);
 
 export default router;

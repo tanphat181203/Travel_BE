@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS Users (
     google_id VARCHAR(255),
     email_verification_token VARCHAR(255),
     reset_password_token VARCHAR(255),
+    refresh_token VARCHAR(255),
     role VARCHAR(20) DEFAULT 'user',
     avatar_url VARCHAR(255),
     phone_number VARCHAR(20) UNIQUE,
@@ -157,6 +158,7 @@ CREATE TABLE IF NOT EXISTS Tour_Promotion (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON Users(email);
 CREATE INDEX IF NOT EXISTS idx_users_role ON Users(role);
 CREATE INDEX IF NOT EXISTS idx_users_status ON Users(status);
+CREATE INDEX IF NOT EXISTS idx_users_refresh_token ON Users(refresh_token);
 
 CREATE INDEX IF NOT EXISTS idx_tour_seller_id ON Tour(seller_id);
 CREATE INDEX IF NOT EXISTS idx_tour_region ON Tour(region);

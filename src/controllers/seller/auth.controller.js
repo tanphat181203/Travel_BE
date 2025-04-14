@@ -3,7 +3,11 @@ dotenv.config();
 
 import User from '../../models/User.js';
 import { hashPassword, comparePassword } from '../../utils/passwordHash.js';
-import { generateToken } from '../../utils/jwtHelper.js';
+import {
+  generateToken,
+  generateRefreshToken,
+  verifyRefreshToken,
+} from '../../utils/jwtHelper.js';
 import sendEmail from '../../services/emailService.js';
 
 export const registerSeller = async (req, res, next) => {
@@ -71,13 +75,20 @@ export const loginSeller = async (req, res, next) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    const token = generateToken({
+    const accessToken = generateToken({
       id: user.id,
       role: user.role,
+      name: user.name,
+      status: user.status,
     });
 
+    const refreshToken = generateRefreshToken({ id: user.id });
+
+    await User.findByIdAndUpdate(user.id, { refreshToken });
+
     res.json({
-      token: token,
+      accessToken,
+      refreshToken,
       seller: {
         id: user.id,
         name: user.name,
@@ -185,7 +196,7 @@ export const changeSellerPassword = async (req, res, next) => {
   try {
     const { password, newPassword } = req.body;
 
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.userId);
 
     if (!user) {
       return res.status(404).json({ message: 'Seller not found' });
@@ -203,6 +214,49 @@ export const changeSellerPassword = async (req, res, next) => {
     });
 
     res.json({ message: 'Seller password changed successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const refreshSellerToken = async (req, res, next) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res.status(400).json({ message: 'Refresh token is required' });
+    }
+
+    let decoded;
+    try {
+      decoded = verifyRefreshToken(refreshToken);
+    } catch (error) {
+      return res
+        .status(401)
+        .json({ message: 'Invalid or expired refresh token' });
+    }
+
+    const user = await User.findById(decoded.userId);
+    if (!user || user.refreshToken !== refreshToken || user.role !== 'seller') {
+      return res.status(401).json({ message: 'Invalid refresh token' });
+    }
+
+    const accessToken = generateToken({
+      id: user.id,
+      role: user.role,
+      name: user.name,
+      status: user.status,
+    });
+
+    res.json({
+      accessToken,
+      seller: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        avatar_url: user.avatar_url,
+      },
+    });
   } catch (error) {
     next(error);
   }

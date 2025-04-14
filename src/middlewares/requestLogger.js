@@ -16,7 +16,7 @@ const requestLogger = (req, res, next) => {
     const responseTime = Date.now() - startTime;
     const statusCode = res.statusCode;
 
-    logger.http(
+    logger.info(
       `API ${method} ${originalUrl} | Status: ${statusCode} | Time: ${responseTime}ms | User: ${userId} (${userRole})`
     );
 

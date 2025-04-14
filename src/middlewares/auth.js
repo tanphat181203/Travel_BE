@@ -21,13 +21,23 @@ export const authenticateJWT = (req, res, next) => {
 
     const decoded = jwt.verify(token, JWT_SECRET);
 
+    req.user = {
+      id: decoded.userId,
+      role: decoded.role,
+      name: decoded.name,
+      status: decoded.status,
+    };
     req.userId = decoded.userId;
     req.role = decoded.role;
 
     next();
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ message: 'Token expired' });
+      return res.status(401).json({
+        message: 'Access token expired',
+        code: 'TOKEN_EXPIRED',
+        expiredAt: error.expiredAt,
+      });
     }
 
     if (error.name === 'JsonWebTokenError') {
