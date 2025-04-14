@@ -100,7 +100,7 @@ const router = express.Router();
  *         description: Server error
  */
 router.post(
-  '/:tourId/departures',
+  '/tours/:tourId/departures',
   authenticateJWT,
   requireSeller,
   departureController.createDeparture
@@ -163,7 +163,7 @@ router.post(
  *         description: Server error
  */
 router.get(
-  '/:tourId/departures',
+  '/tours/:tourId/departures',
   authenticateJWT,
   requireSeller,
   departureController.getDeparturesByTourId
