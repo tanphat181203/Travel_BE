@@ -661,4 +661,71 @@ router.delete(
   tourController.deleteTourImage
 );
 
+/**
+ * @swagger
+ * /seller/tours/{id}/cover-image:
+ *   post:
+ *     tags:
+ *       - Seller - Tour Management
+ *     summary: Upload and set cover image
+ *     description: Upload a single image for a tour and set it as the cover image (seller access only)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Tour ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: Image file to upload and set as cover
+ *     responses:
+ *       201:
+ *         description: Cover image uploaded and set successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 image_id:
+ *                   type: integer
+ *                 tour_id:
+ *                   type: integer
+ *                 image_url:
+ *                   type: string
+ *                 is_cover:
+ *                   type: boolean
+ *                   enum: [true]
+ *                 upload_date:
+ *                   type: string
+ *                   format: date-time
+ *       400:
+ *         description: No image file uploaded
+ *       401:
+ *         description: Unauthorized - not logged in
+ *       403:
+ *         description: Not authorized to upload image for this tour
+ *       404:
+ *         description: Tour not found
+ *       500:
+ *         description: Server error
+ */
+router.post(
+  '/:id/cover-image',
+  authenticateJWT,
+  requireSeller,
+  upload.single('image'),
+  tourController.uploadAndSetCoverImage
+);
+
 export default router;

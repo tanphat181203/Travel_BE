@@ -291,17 +291,22 @@ class Tour {
   }
 
   static async setCoverImage(tourId, imageId) {
+    if (!imageId) {
+      await pool.query(
+        'UPDATE Images SET is_cover = false WHERE tour_id = $1',
+        [tourId]
+      );
+      return null;
+    }
     await pool.query('UPDATE Images SET is_cover = false WHERE tour_id = $1', [
       tourId,
     ]);
-
     const query = `
       UPDATE Images
       SET is_cover = true
       WHERE image_id = $1 AND tour_id = $2
       RETURNING *
     `;
-
     const result = await pool.query(query, [imageId, tourId]);
     return result.rows[0];
   }
@@ -337,6 +342,24 @@ class Tour {
         `Error deleting image: imageId=${imageId}, tourId=${tourId}`,
         error
       );
+      throw error;
+    }
+  }
+
+  static async addCoverImage(tourId, imageUrl) {
+    try {
+      await this.setCoverImage(tourId, null);
+
+      const query = `
+        INSERT INTO Images (tour_id, image_url, is_cover)
+        VALUES ($1, $2, true)
+        RETURNING *
+      `;
+
+      const result = await pool.query(query, [tourId, imageUrl]);
+      return result.rows[0];
+    } catch (error) {
+      console.error(`Error adding cover image for tour ${tourId}:`, error);
       throw error;
     }
   }

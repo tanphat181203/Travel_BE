@@ -107,10 +107,7 @@ export const updateTour = async (req, res, next) => {
         await Tour.updateEmbedding(id, embedding);
         console.log(`Embedding updated for tour_id = ${id}`);
       } catch (error) {
-        console.error(
-          `Error updating embedding for tour ${id}:`,
-          error
-        );
+        console.error(`Error updating embedding for tour ${id}:`, error);
       }
     })();
 
@@ -225,6 +222,30 @@ export const deleteTourImage = async (req, res, next) => {
     await Tour.deleteImage(tourId, imageId);
 
     res.status(200).json({ message: 'Image deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const uploadAndSetCoverImage = async (req, res, next) => {
+  try {
+    const tourId = req.params.id;
+    const sellerId = req.userId;
+
+    const tour = await checkTourOwnership(tourId, sellerId);
+    if (!tour.success) {
+      return res.status(tour.status).json({ message: tour.message });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: 'No image file uploaded' });
+    }
+
+    const imageUrl = await uploadToFirebase(req.file, `tours/${tourId}`);
+
+    const savedImage = await Tour.addCoverImage(tourId, imageUrl);
+
+    res.status(201).json(savedImage);
   } catch (error) {
     next(error);
   }
