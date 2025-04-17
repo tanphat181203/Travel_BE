@@ -1,6 +1,7 @@
 import express from 'express';
 import * as departureController from '../../controllers/seller/departure.controller.js';
 import { authenticateJWT, requireSeller } from '../../middlewares/auth.js';
+import requestLogger from './../../middlewares/requestLogger.js';
 
 const router = express.Router();
 
@@ -103,6 +104,7 @@ router.post(
   '/tours/:tourId/departures',
   authenticateJWT,
   requireSeller,
+  requestLogger,
   departureController.createDeparture
 );
 
@@ -166,6 +168,7 @@ router.get(
   '/tours/:tourId/departures',
   authenticateJWT,
   requireSeller,
+  requestLogger,
   departureController.getDeparturesByTourId
 );
 
@@ -243,6 +246,7 @@ router.get(
   '/departures',
   authenticateJWT,
   requireSeller,
+  requestLogger,
   departureController.searchDepartures
 );
 
@@ -304,6 +308,7 @@ router.get(
   '/departures/:departureId',
   authenticateJWT,
   requireSeller,
+  requestLogger,
   departureController.getDepartureById
 );
 
@@ -400,6 +405,7 @@ router.put(
   '/departures/:departureId',
   authenticateJWT,
   requireSeller,
+  requestLogger,
   departureController.updateDeparture
 );
 
@@ -446,6 +452,7 @@ router.delete(
   '/departures/:departureId',
   authenticateJWT,
   requireSeller,
+  requestLogger,
   departureController.deleteDeparture
 );
 

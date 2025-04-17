@@ -1,6 +1,7 @@
 import express from 'express';
 import * as authController from '../../controllers/user/auth.controller.js';
 import { authenticateJWT } from '../../middlewares/auth.js';
+import requestLogger from './../../middlewares/requestLogger.js';
 
 const router = express.Router();
 
@@ -47,7 +48,7 @@ const router = express.Router();
  *       500:
  *         description: Server error
  */
-router.post('/register', authController.registerUser);
+router.post('/register', requestLogger, authController.registerUser);
 
 /**
  * @swagger
@@ -102,7 +103,7 @@ router.post('/register', authController.registerUser);
  *       500:
  *         description: Server error
  */
-router.post('/login', authController.loginUser);
+router.post('/login', requestLogger, authController.loginUser);
 
 /**
  * @swagger
@@ -116,7 +117,7 @@ router.post('/login', authController.loginUser);
  *       302:
  *         description: Redirects to Google authentication page
  */
-router.get('/google', authController.googleLogin);
+router.get('/google', requestLogger, authController.googleLogin);
 
 /**
  * @swagger
@@ -149,7 +150,7 @@ router.get('/google', authController.googleLogin);
  *       400:
  *         description: Google login failed
  */
-router.get('/google/callback', authController.googleCallback);
+router.get('/google/callback', requestLogger, authController.googleCallback);
 
 /**
  * @swagger
@@ -179,7 +180,7 @@ router.get('/google/callback', authController.googleCallback);
  *       500:
  *         description: Server error
  */
-router.post('/reset-password', authController.forgotPassword);
+router.post('/reset-password', requestLogger, authController.forgotPassword);
 
 /**
  * @swagger
@@ -225,7 +226,11 @@ router.post('/reset-password', authController.forgotPassword);
  *       500:
  *         description: Server error
  */
-router.post('/reset-password/:token', authController.resetPassword);
+router.post(
+  '/reset-password/:token',
+  requestLogger,
+  authController.resetPassword
+);
 
 /**
  * @swagger
@@ -274,7 +279,12 @@ router.post('/reset-password/:token', authController.resetPassword);
  *       500:
  *         description: Server error
  */
-router.put('/change-password', authenticateJWT, authController.changePassword);
+router.put(
+  '/change-password',
+  requestLogger,
+  authenticateJWT,
+  authController.changePassword
+);
 
 /**
  * @swagger
@@ -299,7 +309,7 @@ router.put('/change-password', authenticateJWT, authController.changePassword);
  *       500:
  *         description: Server error
  */
-router.get('/verify-email/:token', authController.verifyEmail);
+router.get('/verify-email/:token', requestLogger, authController.verifyEmail);
 
 /**
  * @swagger
@@ -349,6 +359,6 @@ router.get('/verify-email/:token', authController.verifyEmail);
  *       500:
  *         description: Server error
  */
-router.post('/refresh-token', authController.refreshToken);
+router.post('/refresh-token', requestLogger, authController.refreshToken);
 
 export default router;

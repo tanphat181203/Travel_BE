@@ -1,6 +1,7 @@
 import express from 'express';
 import * as sellerController from '../../controllers/admin/seller.controller.js';
 import { authenticateJWT, requireAdmin } from '../../middlewares/auth.js';
+import requestLogger from './../../middlewares/requestLogger.js';
 
 const router = express.Router();
 
@@ -49,7 +50,13 @@ const router = express.Router();
  *       500:
  *         description: Server error
  */
-router.get('/', authenticateJWT, requireAdmin, sellerController.listSellers);
+router.get(
+  '/',
+  authenticateJWT,
+  requireAdmin,
+  requestLogger,
+  sellerController.listSellers
+);
 
 /**
  * @swagger
@@ -107,6 +114,7 @@ router.get(
   '/:id',
   authenticateJWT,
   requireAdmin,
+  requestLogger,
   sellerController.getSellerById
 );
 
@@ -143,6 +151,7 @@ router.delete(
   '/:id',
   authenticateJWT,
   requireAdmin,
+  requestLogger,
   sellerController.deleteSeller
 );
 

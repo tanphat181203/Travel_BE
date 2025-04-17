@@ -2,6 +2,7 @@ import express from 'express';
 import * as profileController from '../../controllers/seller/profile.controller.js';
 import { authenticateJWT, requireSeller } from '../../middlewares/auth.js';
 import { upload } from '../../utils/uploadHandler.js';
+import requestLogger from './../../middlewares/requestLogger.js';
 
 const router = express.Router();
 
@@ -53,6 +54,7 @@ router.get(
   '/',
   authenticateJWT,
   requireSeller,
+  requestLogger,
   profileController.getSellerProfile
 );
 
@@ -123,6 +125,7 @@ router.put(
   '/',
   authenticateJWT,
   requireSeller,
+  requestLogger,
   upload.single('avatar'),
   profileController.updateSellerProfile
 );

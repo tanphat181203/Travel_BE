@@ -5,10 +5,8 @@ import express from 'express';
 import cors from 'cors';
 import passport from './config/passport.js';
 import errorHandler from './middlewares/errorHandler.js';
-import requestLogger from './middlewares/requestLogger.js';
 import { setupSwagger } from './config/swagger.js';
 import { initCronJobs } from './utils/cronJobs.js';
-import logger from './utils/logger.js';
 import adminRoutes from './routes/admin/index.js';
 import sellerRoutes from './routes/seller/index.js';
 import userRoutes from './routes/user/index.js';
@@ -19,8 +17,6 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 app.use(passport.initialize());
-
-app.use(requestLogger);
 
 app.use('/api/admin', adminRoutes);
 app.use('/api/seller', sellerRoutes);

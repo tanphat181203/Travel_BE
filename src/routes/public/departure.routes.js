@@ -1,5 +1,6 @@
 import express from 'express';
 import * as departureController from '../../controllers/public/departure.controller.js';
+import requestLogger from './../../middlewares/requestLogger.js';
 
 const router = express.Router();
 
@@ -53,7 +54,11 @@ const router = express.Router();
  *       500:
  *         description: Server error
  */
-router.get('/tours/:tourId/departures', departureController.getDeparturesByTourId);
+router.get(
+  '/tours/:tourId/departures',
+  requestLogger,
+  departureController.getDeparturesByTourId
+);
 
 /**
  * @swagger
@@ -103,7 +108,11 @@ router.get('/tours/:tourId/departures', departureController.getDeparturesByTourI
  *       500:
  *         description: Server error
  */
-router.get('/departures/:departureId', departureController.getDepartureById);
+router.get(
+  '/departures/:departureId',
+  requestLogger,
+  departureController.getDepartureById
+);
 
 /**
  * @swagger
@@ -166,6 +175,6 @@ router.get('/departures/:departureId', departureController.getDepartureById);
  *       500:
  *         description: Server error
  */
-router.get('/departures', departureController.searchDepartures);
+router.get('/departures', requestLogger, departureController.searchDepartures);
 
 export default router;

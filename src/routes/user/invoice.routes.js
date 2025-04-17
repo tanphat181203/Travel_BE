@@ -1,6 +1,7 @@
 import express from 'express';
 import * as invoiceController from '../../controllers/user/invoice.controller.js';
 import { authenticateJWT, requireUser } from '../../middlewares/auth.js';
+import requestLogger from './../../middlewares/requestLogger.js';
 
 const router = express.Router();
 
@@ -26,6 +27,7 @@ router.get(
   '/',
   authenticateJWT,
   requireUser,
+  requestLogger,
   invoiceController.getUserInvoices
 );
 
@@ -62,6 +64,7 @@ router.get(
   '/:id',
   authenticateJWT,
   requireUser,
+  requestLogger,
   invoiceController.getInvoiceById
 );
 
@@ -98,6 +101,7 @@ router.get(
   '/booking/:booking_id',
   authenticateJWT,
   requireUser,
+  requestLogger,
   invoiceController.getInvoiceByBookingId
 );
 
@@ -138,6 +142,7 @@ router.get(
   '/:id/html',
   authenticateJWT,
   requireUser,
+  requestLogger,
   invoiceController.viewInvoiceHtml
 );
 
@@ -178,6 +183,7 @@ router.get(
   '/booking/:booking_id/html',
   authenticateJWT,
   requireUser,
+  requestLogger,
   invoiceController.viewInvoiceHtmlByBookingId
 );
 

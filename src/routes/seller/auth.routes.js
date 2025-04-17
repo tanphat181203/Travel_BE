@@ -1,6 +1,7 @@
 import express from 'express';
 import * as authController from '../../controllers/seller/auth.controller.js';
 import { authenticateJWT, requireSeller } from '../../middlewares/auth.js';
+import requestLogger from './../../middlewares/requestLogger.js';
 
 const router = express.Router();
 
@@ -52,7 +53,7 @@ const router = express.Router();
  *       500:
  *         description: Server error
  */
-router.post('/register', authController.registerSeller);
+router.post('/register', requestLogger, authController.registerSeller);
 
 /**
  * @swagger
@@ -110,7 +111,7 @@ router.post('/register', authController.registerSeller);
  *       500:
  *         description: Server error
  */
-router.post('/login', authController.loginSeller);
+router.post('/login', requestLogger, authController.loginSeller);
 
 /**
  * @swagger
@@ -140,7 +141,11 @@ router.post('/login', authController.loginSeller);
  *       500:
  *         description: Server error
  */
-router.post('/reset-password', authController.forgotSellerPassword);
+router.post(
+  '/reset-password',
+  requestLogger,
+  authController.forgotSellerPassword
+);
 
 /**
  * @swagger
@@ -178,7 +183,11 @@ router.post('/reset-password', authController.forgotSellerPassword);
  *       500:
  *         description: Server error
  */
-router.post('/reset-password/:token', authController.resetSellerPassword);
+router.post(
+  '/reset-password/:token',
+  requestLogger,
+  authController.resetSellerPassword
+);
 
 /**
  * @swagger
@@ -221,6 +230,7 @@ router.put(
   '/change-password',
   authenticateJWT,
   requireSeller,
+  requestLogger,
   authController.changeSellerPassword
 );
 
@@ -247,7 +257,11 @@ router.put(
  *       500:
  *         description: Server error
  */
-router.get('/verify-email/:token', authController.verifySellerEmail);
+router.get(
+  '/verify-email/:token',
+  requestLogger,
+  authController.verifySellerEmail
+);
 
 /**
  * @swagger
@@ -297,6 +311,6 @@ router.get('/verify-email/:token', authController.verifySellerEmail);
  *       500:
  *         description: Server error
  */
-router.post('/refresh-token', authController.refreshSellerToken);
+router.post('/refresh-token', requestLogger, authController.refreshSellerToken);
 
 export default router;

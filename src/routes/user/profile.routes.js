@@ -2,6 +2,7 @@ import express from 'express';
 import * as profileController from '../../controllers/user/profile.controller.js';
 import { authenticateJWT, requireUser } from '../../middlewares/auth.js';
 import { upload } from '../../utils/uploadHandler.js';
+import requestLogger from './../../middlewares/requestLogger.js';
 
 const router = express.Router();
 
@@ -55,7 +56,13 @@ const router = express.Router();
  *       500:
  *         description: Server error
  */
-router.get('/', authenticateJWT, requireUser, profileController.getUserProfile);
+router.get(
+  '/',
+  authenticateJWT,
+  requireUser,
+  requestLogger,
+  profileController.getUserProfile
+);
 
 /**
  * @swagger
@@ -129,6 +136,7 @@ router.put(
   '/',
   authenticateJWT,
   requireUser,
+  requestLogger,
   upload.single('avatar'),
   profileController.updateUserProfile
 );

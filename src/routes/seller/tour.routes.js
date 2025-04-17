@@ -2,6 +2,7 @@ import express from 'express';
 import * as tourController from '../../controllers/seller/tour.controller.js';
 import { authenticateJWT, requireSeller } from '../../middlewares/auth.js';
 import { upload } from '../../utils/uploadHandler.js';
+import requestLogger from './../../middlewares/requestLogger.js';
 
 const router = express.Router();
 
@@ -133,7 +134,13 @@ const router = express.Router();
  *       500:
  *         description: Server error
  */
-router.post('/', authenticateJWT, requireSeller, tourController.createTour);
+router.post(
+  '/',
+  authenticateJWT,
+  requireSeller,
+  requestLogger,
+  tourController.createTour
+);
 
 /**
  * @swagger
@@ -213,6 +220,7 @@ router.get(
   '/',
   authenticateJWT,
   requireSeller,
+  requestLogger,
   tourController.getToursBySellerId
 );
 
@@ -312,6 +320,7 @@ router.get(
   '/search',
   authenticateJWT,
   requireSeller,
+  requestLogger,
   tourController.searchTours
 );
 
@@ -436,7 +445,13 @@ router.get(
  *       500:
  *         description: Server error
  */
-router.put('/:id', authenticateJWT, requireSeller, tourController.updateTour);
+router.put(
+  '/:id',
+  authenticateJWT,
+  requireSeller,
+  requestLogger,
+  tourController.updateTour
+);
 
 /**
  * @swagger
@@ -479,6 +494,7 @@ router.delete(
   '/:id',
   authenticateJWT,
   requireSeller,
+  requestLogger,
   tourController.deleteTour
 );
 
@@ -548,6 +564,7 @@ router.post(
   '/:id/images',
   authenticateJWT,
   requireSeller,
+  requestLogger,
   upload.array('images', 10),
   tourController.uploadTourImages
 );
@@ -608,6 +625,7 @@ router.put(
   '/:id/cover-image/:imageId',
   authenticateJWT,
   requireSeller,
+  requestLogger,
   tourController.setCoverImage
 );
 
@@ -658,6 +676,7 @@ router.delete(
   '/:id/images/:imageId',
   authenticateJWT,
   requireSeller,
+  requestLogger,
   tourController.deleteTourImage
 );
 
@@ -724,6 +743,7 @@ router.post(
   '/:id/cover-image',
   authenticateJWT,
   requireSeller,
+  requestLogger,
   upload.single('image'),
   tourController.uploadAndSetCoverImage
 );

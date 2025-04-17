@@ -1,5 +1,6 @@
 import express from 'express';
 import * as tourController from '../../controllers/public/tour.controller.js';
+import requestLogger from './../../middlewares/requestLogger.js';
 
 const router = express.Router();
 
@@ -75,7 +76,7 @@ const router = express.Router();
  *       500:
  *         description: Server error
  */
-router.get('/search', tourController.searchTours);
+router.get('/search', requestLogger, tourController.searchTours);
 
 /**
  * @swagger
@@ -145,7 +146,7 @@ router.get('/search', tourController.searchTours);
  *       500:
  *         description: Server error
  */
-router.post('/semantic-search', tourController.semanticSearch);
+router.post('/semantic-search', requestLogger, tourController.semanticSearch);
 
 /**
  * @swagger
@@ -208,6 +209,6 @@ router.post('/semantic-search', tourController.semanticSearch);
  *       500:
  *         description: Server error
  */
-router.get('/:tourId', tourController.getTourById);
+router.get('/:tourId', requestLogger, tourController.getTourById);
 
 export default router;

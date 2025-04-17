@@ -1,6 +1,7 @@
 import express from 'express';
 import * as cronController from '../../controllers/admin/cron.controller.js';
 import { authenticateJWT, requireAdmin } from '../../middlewares/auth.js';
+import requestLogger from './../../middlewares/requestLogger.js';
 
 const router = express.Router();
 
@@ -51,6 +52,7 @@ router.post(
   '/update-overdue-departures',
   authenticateJWT,
   requireAdmin,
+  requestLogger,
   cronController.triggerOverdueDeparturesUpdate
 );
 

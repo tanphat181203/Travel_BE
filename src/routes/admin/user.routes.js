@@ -1,6 +1,7 @@
 import express from 'express';
 import * as userController from '../../controllers/admin/user.controller.js';
 import { authenticateJWT, requireAdmin } from '../../middlewares/auth.js';
+import requestLogger from './../../middlewares/requestLogger.js';
 
 const router = express.Router();
 
@@ -52,7 +53,13 @@ const router = express.Router();
  *       500:
  *         description: Server error
  */
-router.get('/', authenticateJWT, requireAdmin, userController.listUsers);
+router.get(
+  '/',
+  authenticateJWT,
+  requireAdmin,
+  requestLogger,
+  userController.listUsers
+);
 
 /**
  * @swagger
@@ -109,7 +116,13 @@ router.get('/', authenticateJWT, requireAdmin, userController.listUsers);
  *       500:
  *         description: Server error
  */
-router.get('/:id', authenticateJWT, requireAdmin, userController.getUserById);
+router.get(
+  '/:id',
+  authenticateJWT,
+  requireAdmin,
+  requestLogger,
+  userController.getUserById
+);
 
 /**
  * @swagger
@@ -163,7 +176,13 @@ router.get('/:id', authenticateJWT, requireAdmin, userController.getUserById);
  *       500:
  *         description: Server error
  */
-router.put('/:id', authenticateJWT, requireAdmin, userController.updateUser);
+router.put(
+  '/:id',
+  authenticateJWT,
+  requireAdmin,
+  requestLogger,
+  userController.updateUser
+);
 
 /**
  * @swagger
@@ -194,6 +213,12 @@ router.put('/:id', authenticateJWT, requireAdmin, userController.updateUser);
  *       500:
  *         description: Server error
  */
-router.delete('/:id', authenticateJWT, requireAdmin, userController.deleteUser);
+router.delete(
+  '/:id',
+  authenticateJWT,
+  requireAdmin,
+  requestLogger,
+  userController.deleteUser
+);
 
 export default router;

@@ -5,6 +5,7 @@ import {
   refreshAdminToken,
 } from '../../controllers/admin/auth.controller.js';
 import { authenticateJWT, requireAdmin } from '../../middlewares/auth.js';
+import requestLogger from './../../middlewares/requestLogger.js';
 
 const router = express.Router();
 
@@ -61,7 +62,7 @@ const router = express.Router();
  *       500:
  *         description: Server error
  */
-router.post('/login', loginAdmin);
+router.post('/login', requestLogger, loginAdmin);
 
 /**
  * @swagger
@@ -109,6 +110,7 @@ router.put(
   '/change-password',
   authenticateJWT,
   requireAdmin,
+  requestLogger,
   changeAdminPassword
 );
 
@@ -158,6 +160,6 @@ router.put(
  *       500:
  *         description: Server error
  */
-router.post('/refresh-token', refreshAdminToken);
+router.post('/refresh-token', requestLogger, refreshAdminToken);
 
 export default router;

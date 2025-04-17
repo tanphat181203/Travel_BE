@@ -1,6 +1,7 @@
 import express from 'express';
 import * as paymentController from '../../controllers/user/payment.controller.js';
 import { authenticateJWT, requireUser } from '../../middlewares/auth.js';
+import requestLogger from './../../middlewares/requestLogger.js';
 
 const router = express.Router();
 
@@ -70,7 +71,13 @@ const router = express.Router();
  *       500:
  *         description: Server error
  */
-router.post('/', authenticateJWT, requireUser, paymentController.createPayment);
+router.post(
+  '/',
+  authenticateJWT,
+  requireUser,
+  requestLogger,
+  paymentController.createPayment
+);
 
 /**
  * @swagger
@@ -105,7 +112,7 @@ router.post('/', authenticateJWT, requireUser, paymentController.createPayment);
  *       302:
  *         description: Redirects to success or failure page
  */
-router.get('/vnpay-return', paymentController.vnpayReturn);
+router.get('/vnpay-return', requestLogger, paymentController.vnpayReturn);
 
 /**
  * @swagger
@@ -140,6 +147,6 @@ router.get('/vnpay-return', paymentController.vnpayReturn);
  *       200:
  *         description: IPN response
  */
-router.get('/vnpay-ipn', paymentController.vnpayIPN);
+router.get('/vnpay-ipn', requestLogger, paymentController.vnpayIPN);
 
 export default router;

@@ -1,6 +1,7 @@
 import express from 'express';
 import * as bookingController from '../../controllers/seller/booking.controller.js';
 import { authenticateJWT, requireSeller } from '../../middlewares/auth.js';
+import requestLogger from './../../middlewares/requestLogger.js';
 
 const router = express.Router();
 
@@ -117,6 +118,7 @@ router.get(
   '/',
   authenticateJWT,
   requireSeller,
+  requestLogger,
   bookingController.getSellerBookings
 );
 
@@ -174,6 +176,7 @@ router.get(
   '/invoices',
   authenticateJWT,
   requireSeller,
+  requestLogger,
   bookingController.getSellerInvoices
 );
 
@@ -265,6 +268,7 @@ router.get(
   '/:bookingId',
   authenticateJWT,
   requireSeller,
+  requestLogger,
   bookingController.getBookingById
 );
 
@@ -316,6 +320,7 @@ router.post(
   '/:bookingId/confirm-payment',
   authenticateJWT,
   requireSeller,
+  requestLogger,
   bookingController.confirmPayment
 );
 

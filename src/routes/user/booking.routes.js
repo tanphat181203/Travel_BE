@@ -1,6 +1,7 @@
 import express from 'express';
 import * as bookingController from '../../controllers/user/booking.controller.js';
 import { authenticateJWT, requireUser } from '../../middlewares/auth.js';
+import requestLogger from './../../middlewares/requestLogger.js';
 
 const router = express.Router();
 
@@ -54,7 +55,13 @@ const router = express.Router();
  *       500:
  *         description: Server error
  */
-router.post('/', authenticateJWT, requireUser, bookingController.createBooking);
+router.post(
+  '/',
+  authenticateJWT,
+  requireUser,
+  requestLogger,
+  bookingController.createBooking
+);
 
 /**
  * @swagger
@@ -78,6 +85,7 @@ router.get(
   '/',
   authenticateJWT,
   requireUser,
+  requestLogger,
   bookingController.getUserBookings
 );
 
@@ -114,6 +122,7 @@ router.get(
   '/:id',
   authenticateJWT,
   requireUser,
+  requestLogger,
   bookingController.getBookingById
 );
 
@@ -152,6 +161,7 @@ router.put(
   '/:id/cancel',
   authenticateJWT,
   requireUser,
+  requestLogger,
   bookingController.cancelBooking
 );
 
