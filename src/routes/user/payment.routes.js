@@ -11,7 +11,7 @@ const router = express.Router();
  *     tags:
  *       - User - Payment Management
  *     summary: Create a payment for a booking
- *     description: Initiate a payment process for a booking using VNPay
+ *     description: Initiate a payment process for a booking using VNPay or direct payment to seller
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -26,25 +26,41 @@ const router = express.Router();
  *               booking_id:
  *                 type: integer
  *                 description: ID of the booking to pay for
+ *               payment_method:
+ *                 type: string
+ *                 enum: [vnpay, direct_to_seller]
+ *                 description: Payment method to use (default is vnpay)
  *     responses:
  *       200:
  *         description: Payment initiated successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                 paymentUrl:
- *                   type: string
- *                   description: URL to redirect the user for payment
- *                 checkout_id:
- *                   type: integer
- *                 transaction_id:
- *                   type: string
+ *               oneOf:
+ *                 - type: object
+ *                   properties:
+ *                     message:
+ *                       type: string
+ *                     paymentUrl:
+ *                       type: string
+ *                       description: URL to redirect the user for payment (only for vnpay)
+ *                     checkout_id:
+ *                       type: integer
+ *                     transaction_id:
+ *                       type: string
+ *                 - type: object
+ *                   properties:
+ *                     message:
+ *                       type: string
+ *                     checkout_id:
+ *                       type: integer
+ *                     payment_status:
+ *                       type: string
+ *                       enum: [awaiting_seller_confirmation]
+ *                     booking_id:
+ *                       type: integer
  *       400:
- *         description: Invalid input or booking already paid
+ *         description: Invalid input, booking already paid, or invalid payment method
  *       401:
  *         description: Unauthorized
  *       403:
