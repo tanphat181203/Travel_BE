@@ -28,13 +28,16 @@ class Invoice {
   static async findById(invoiceId) {
     const query = `
       SELECT i.*, b.user_id, b.departure_id, b.num_adults, b.num_children_120_140, b.num_children_100_120,
-             d.start_date, d.tour_id, t.title as tour_title, t.departure_location,
-             u.name as user_name, u.email as user_email
+             d.start_date, d.tour_id, d.price_adult, d.price_child_120_140, d.price_child_100_120,
+             t.title as tour_title, t.departure_location, t.seller_id, t.duration,
+             u.name as user_name, u.email as user_email, u.phone_number as user_phone, u.address as user_address,
+             s.name as seller_name, s.email as seller_email, s.phone_number as seller_phone, s.address as seller_address, s.avatar_url as seller_avatar_url
       FROM Invoice i
       JOIN Booking b ON i.booking_id = b.booking_id
       JOIN Departure d ON b.departure_id = d.departure_id
       JOIN Tour t ON d.tour_id = t.tour_id
       JOIN Users u ON b.user_id = u.id
+      JOIN Users s ON t.seller_id = s.id
       WHERE i.invoice_id = $1
     `;
 
@@ -49,9 +52,19 @@ class Invoice {
 
   static async findByBookingId(bookingId) {
     const query = `
-      SELECT * FROM Invoice
-      WHERE booking_id = $1
-      ORDER BY date_issued DESC
+      SELECT i.*, b.user_id, b.departure_id, b.num_adults, b.num_children_120_140, b.num_children_100_120,
+             d.start_date, d.tour_id, d.price_adult, d.price_child_120_140, d.price_child_100_120,
+             t.title as tour_title, t.departure_location, t.seller_id, t.duration,
+             u.name as user_name, u.email as user_email, u.phone_number as user_phone, u.address as user_address,
+             s.name as seller_name, s.email as seller_email, s.phone_number as seller_phone, s.address as seller_address, s.avatar_url as seller_avatar_url
+      FROM Invoice i
+      JOIN Booking b ON i.booking_id = b.booking_id
+      JOIN Departure d ON b.departure_id = d.departure_id
+      JOIN Tour t ON d.tour_id = t.tour_id
+      JOIN Users u ON b.user_id = u.id
+      JOIN Users s ON t.seller_id = s.id
+      WHERE i.booking_id = $1
+      ORDER BY i.date_issued DESC
     `;
 
     try {
@@ -65,11 +78,13 @@ class Invoice {
 
   static async findByUserId(userId) {
     const query = `
-      SELECT i.*, b.booking_status, d.start_date, t.title as tour_title
+      SELECT i.*, b.booking_status, d.start_date, t.title as tour_title, t.seller_id, t.duration,
+             s.name as seller_name, s.avatar_url as seller_avatar_url
       FROM Invoice i
       JOIN Booking b ON i.booking_id = b.booking_id
       JOIN Departure d ON b.departure_id = d.departure_id
       JOIN Tour t ON d.tour_id = t.tour_id
+      JOIN Users s ON t.seller_id = s.id
       WHERE b.user_id = $1
       ORDER BY i.date_issued DESC
     `;
@@ -85,12 +100,15 @@ class Invoice {
 
   static async findBySellerId(sellerId) {
     const query = `
-      SELECT i.*, b.booking_status, b.user_id, d.start_date, t.title as tour_title, u.name as user_name, u.email as user_email
+      SELECT i.*, b.booking_status, b.user_id, d.start_date, t.title as tour_title, t.duration,
+             u.name as user_name, u.email as user_email,
+             s.name as seller_name, s.avatar_url as seller_avatar_url
       FROM Invoice i
       JOIN Booking b ON i.booking_id = b.booking_id
       JOIN Departure d ON b.departure_id = d.departure_id
       JOIN Tour t ON d.tour_id = t.tour_id
       JOIN Users u ON b.user_id = u.id
+      JOIN Users s ON t.seller_id = s.id
       WHERE t.seller_id = $1
       ORDER BY i.date_issued DESC
     `;

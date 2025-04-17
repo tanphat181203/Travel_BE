@@ -1,22 +1,22 @@
 import express from 'express';
-import * as invoiceController from '../../controllers/user/invoice.controller.js';
-import { authenticateJWT, requireUser } from '../../middlewares/auth.js';
+import * as invoiceController from '../../controllers/seller/invoice.controller.js';
+import { authenticateJWT, requireSeller } from '../../middlewares/auth.js';
 
 const router = express.Router();
 
 /**
  * @swagger
- * /user/invoices:
+ * /seller/invoices:
  *   get:
  *     tags:
- *       - User - Invoice Management
- *     summary: Get user invoices
- *     description: Get all invoices for the authenticated user
+ *       - Seller - Invoice Management
+ *     summary: Get seller invoices
+ *     description: Get all invoices for the authenticated seller's tours
  *     security:
  *       - BearerAuth: []
  *     responses:
  *       200:
- *         description: List of user invoices
+ *         description: List of seller invoices
  *       401:
  *         description: Unauthorized
  *       500:
@@ -25,16 +25,16 @@ const router = express.Router();
 router.get(
   '/',
   authenticateJWT,
-  requireUser,
-  invoiceController.getUserInvoices
+  requireSeller,
+  invoiceController.getSellerInvoices
 );
 
 /**
  * @swagger
- * /user/invoices/{id}:
+ * /seller/invoices/{id}:
  *   get:
  *     tags:
- *       - User - Invoice Management
+ *       - Seller - Invoice Management
  *     summary: Get invoice by ID
  *     description: Get a specific invoice by ID
  *     security:
@@ -61,52 +61,16 @@ router.get(
 router.get(
   '/:id',
   authenticateJWT,
-  requireUser,
+  requireSeller,
   invoiceController.getInvoiceById
 );
 
 /**
  * @swagger
- * /user/invoices/booking/{booking_id}:
+ * /seller/invoices/{id}/html:
  *   get:
  *     tags:
- *       - User - Invoice Management
- *     summary: Get invoice by booking ID
- *     description: Get the invoice for a specific booking
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: booking_id
- *         required: true
- *         schema:
- *           type: integer
- *         description: Booking ID
- *     responses:
- *       200:
- *         description: Invoice details
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Not authorized to access this booking
- *       404:
- *         description: Booking or invoice not found
- *       500:
- *         description: Server error
- */
-router.get(
-  '/booking/:booking_id',
-  authenticateJWT,
-  requireUser,
-  invoiceController.getInvoiceByBookingId
-);
-
-/**
- * @swagger
- * /user/invoices/{id}/html:
- *   get:
- *     tags:
- *       - User - Invoice Management
+ *       - Seller - Invoice Management
  *     summary: View invoice HTML by ID
  *     description: Generate and display an HTML invoice by ID
  *     security:
@@ -137,16 +101,16 @@ router.get(
 router.get(
   '/:id/html',
   authenticateJWT,
-  requireUser,
+  requireSeller,
   invoiceController.viewInvoiceHtml
 );
 
 /**
  * @swagger
- * /user/invoices/booking/{booking_id}/html:
+ * /seller/invoices/booking/{booking_id}/html:
  *   get:
  *     tags:
- *       - User - Invoice Management
+ *       - Seller - Invoice Management
  *     summary: View invoice HTML by booking ID
  *     description: Generate and display an HTML invoice for a specific booking
  *     security:
@@ -177,7 +141,7 @@ router.get(
 router.get(
   '/booking/:booking_id/html',
   authenticateJWT,
-  requireUser,
+  requireSeller,
   invoiceController.viewInvoiceHtmlByBookingId
 );
 
