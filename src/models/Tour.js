@@ -1,5 +1,6 @@
 import { pool } from '../config/db.js';
 import { generateEmbedding } from '../utils/embeddingHelper.js';
+import { addPaginationToQuery } from '../utils/pagination.js';
 
 class Tour {
   static async create(tourData) {
@@ -117,12 +118,21 @@ class Tour {
     return tour;
   }
 
-  static async findBySellerId(sellerId) {
-    const query = 'SELECT * FROM Tour WHERE seller_id = $1';
+  static async findBySellerId(sellerId, limit, offset) {
+    const countQuery = 'SELECT COUNT(*) FROM Tour WHERE seller_id = $1';
+    const countResult = await pool.query(countQuery, [sellerId]);
+    const totalItems = parseInt(countResult.rows[0].count);
+
+    let query = 'SELECT * FROM Tour WHERE seller_id = $1';
+
+    if (limit !== undefined && offset !== undefined) {
+      query = addPaginationToQuery(query, limit, offset);
+    }
+
     const result = await pool.query(query, [sellerId]);
     const tours = result.rows;
 
-    if (tours.length === 0) return [];
+    if (tours.length === 0) return { tours: [], totalItems };
 
     const tourIds = tours.map((tour) => tour.tour_id);
     const imagesQuery = `
@@ -145,7 +155,7 @@ class Tour {
       tour.images = imagesByTourId[tour.tour_id] || [];
     });
 
-    return tours;
+    return { tours, totalItems };
   }
 
   static async delete(tourId) {
@@ -178,33 +188,53 @@ class Tour {
 
   static async search(searchParams) {
     let query = 'SELECT * FROM Tour WHERE 1=1';
+    const countQuery = 'SELECT COUNT(*) FROM Tour WHERE 1=1';
     const values = [];
     let paramIndex = 1;
 
     if (searchParams.region) {
-      query += ` AND region = $${paramIndex++}`;
+      const condition = ` AND region = $${paramIndex++}`;
+      query += condition;
+      countQuery += condition;
       values.push(searchParams.region);
     }
 
     if (searchParams.destination) {
-      query += ` AND destination @> ARRAY[$${paramIndex++}]`;
+      const condition = ` AND destination @> ARRAY[$${paramIndex++}]`;
+      query += condition;
+      countQuery += condition;
       values.push(searchParams.destination);
     }
 
     if (searchParams.availability !== undefined) {
-      query += ` AND availability = $${paramIndex++}`;
+      const condition = ` AND availability = $${paramIndex++}`;
+      query += condition;
+      countQuery += condition;
       values.push(searchParams.availability);
     }
 
     if (searchParams.seller_id) {
-      query += ` AND seller_id = $${paramIndex++}`;
+      const condition = ` AND seller_id = $${paramIndex++}`;
+      query += condition;
+      countQuery += condition;
       values.push(searchParams.seller_id);
+    }
+
+    const countResult = await pool.query(countQuery, values);
+    const totalItems = parseInt(countResult.rows[0].count);
+
+    if (searchParams.limit !== undefined && searchParams.offset !== undefined) {
+      query = addPaginationToQuery(
+        query,
+        searchParams.limit,
+        searchParams.offset
+      );
     }
 
     const result = await pool.query(query, values);
     const tours = result.rows;
 
-    if (tours.length === 0) return [];
+    if (tours.length === 0) return { tours: [], totalItems };
 
     const tourIds = tours.map((tour) => tour.tour_id);
     const imagesQuery = `
@@ -227,23 +257,30 @@ class Tour {
       tour.images = imagesByTourId[tour.tour_id] || [];
     });
 
-    return tours;
+    return { tours, totalItems };
   }
 
-  static async semanticSearch(query) {
+  static async semanticSearch(query, limit = 10, offset = 0) {
     const embedding = await generateEmbedding({ query });
-    if (!embedding) return [];
+    if (!embedding) return { tours: [], totalItems: 0 };
+
+    const countQuery = `
+      SELECT COUNT(*) FROM Tour
+      WHERE embedding <=> $1 < 0.5
+    `;
+    const countResult = await pool.query(countQuery, [embedding]);
+    const totalItems = parseInt(countResult.rows[0].count);
 
     const searchQuery = `
       SELECT * FROM Tour
       WHERE embedding <=> $1 < 0.5
       ORDER BY embedding <=> $1
-      LIMIT 10
+      LIMIT ${limit} OFFSET ${offset}
     `;
     const result = await pool.query(searchQuery, [embedding]);
     const tours = result.rows;
 
-    if (tours.length === 0) return [];
+    if (tours.length === 0) return { tours: [], totalItems };
 
     const tourIds = tours.map((tour) => tour.tour_id);
     const imagesQuery = `
@@ -266,7 +303,7 @@ class Tour {
       tour.images = imagesByTourId[tour.tour_id] || [];
     });
 
-    return tours;
+    return { tours, totalItems };
   }
 
   static async addImages(tourId, imageUrls) {

@@ -1,53 +1,33 @@
 import Invoice from '../../models/Invoice.js';
 import { generateInvoiceHtml } from '../../services/invoice.service.js';
-import { pool } from '../../config/db.js';
 import logger from '../../utils/logger.js';
-
-const checkInvoiceOwnership = async (invoiceId, sellerId) => {
-  try {
-    const query = `
-      SELECT i.invoice_id, t.seller_id
-      FROM Invoice i
-      JOIN Booking b ON i.booking_id = b.booking_id
-      JOIN Departure d ON b.departure_id = d.departure_id
-      JOIN Tour t ON d.tour_id = t.tour_id
-      WHERE i.invoice_id = $1
-    `;
-
-    const result = await pool.query(query, [invoiceId]);
-
-    if (result.rows.length === 0) {
-      return { success: false, status: 404, message: 'Invoice not found' };
-    }
-
-    if (result.rows[0].seller_id !== sellerId) {
-      return {
-        success: false,
-        status: 403,
-        message: 'Not authorized to access this invoice',
-      };
-    }
-
-    return { success: true };
-  } catch (error) {
-    logger.error(`Error checking invoice ownership: ${error.message}`);
-    return {
-      success: false,
-      status: 500,
-      message: 'Server error checking invoice ownership',
-    };
-  }
-};
+import {
+  getPaginationParams,
+  createPaginationMetadata,
+} from '../../utils/pagination.js';
 
 export const getSellerInvoices = async (req, res) => {
   try {
     const sellerId = req.userId;
 
-    const invoices = await Invoice.findBySellerId(sellerId);
+    const { page, limit, offset } = getPaginationParams(req.query);
 
-    logger.info(`Retrieved ${invoices.length} invoices for seller ${sellerId}`);
+    const { invoices, totalItems } = await Invoice.findBySellerId(
+      sellerId,
+      limit,
+      offset
+    );
 
-    res.status(200).json(invoices);
+    const pagination = createPaginationMetadata(page, limit, totalItems);
+
+    logger.info(
+      `Retrieved ${invoices.length} invoices for seller ${sellerId} (page ${page})`
+    );
+
+    res.status(200).json({
+      invoices,
+      pagination,
+    });
   } catch (error) {
     logger.error(`Error getting seller invoices: ${error.message}`);
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -59,7 +39,7 @@ export const getInvoiceById = async (req, res) => {
     const { id } = req.params;
     const sellerId = req.userId;
 
-    const ownershipCheck = await checkInvoiceOwnership(id, sellerId);
+    const ownershipCheck = await Invoice.checkOwnership(id, sellerId);
     if (!ownershipCheck.success) {
       return res
         .status(ownershipCheck.status)
@@ -82,7 +62,7 @@ export const viewInvoiceHtml = async (req, res) => {
     const { id } = req.params;
     const sellerId = req.userId;
 
-    const ownershipCheck = await checkInvoiceOwnership(id, sellerId);
+    const ownershipCheck = await Invoice.checkOwnership(id, sellerId);
     if (!ownershipCheck.success) {
       return res
         .status(ownershipCheck.status)
@@ -160,24 +140,14 @@ export const viewInvoiceHtmlByBookingId = async (req, res) => {
     const { booking_id } = req.params;
     const sellerId = req.userId;
 
-    const query = `
-      SELECT b.booking_id, t.seller_id
-      FROM Booking b
-      JOIN Departure d ON b.departure_id = d.departure_id
-      JOIN Tour t ON d.tour_id = t.tour_id
-      WHERE b.booking_id = $1
-    `;
-
-    const result = await pool.query(query, [booking_id]);
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'Booking not found' });
-    }
-
-    if (result.rows[0].seller_id !== sellerId) {
+    const ownershipCheck = await Invoice.checkBookingOwnership(
+      booking_id,
+      sellerId
+    );
+    if (!ownershipCheck.success) {
       return res
-        .status(403)
-        .json({ message: 'Not authorized to access this booking' });
+        .status(ownershipCheck.status)
+        .json({ message: ownershipCheck.message });
     }
 
     const invoice = await Invoice.findByBookingId(booking_id);

@@ -1,8 +1,18 @@
 import User from '../../models/User.js';
+import {
+  getPaginationParams,
+  createPaginationMetadata,
+} from '../../utils/pagination.js';
 
 export const listSellers = async (req, res, next) => {
   try {
-    const sellers = await User.find({ role: 'seller' });
+    const { page, limit, offset } = getPaginationParams(req.query);
+
+    const { users: sellers, totalItems } = await User.find(
+      { role: 'seller' },
+      limit,
+      offset
+    );
 
     const sanitizedSellers = sellers.map((seller) => ({
       id: seller.id,
@@ -14,7 +24,12 @@ export const listSellers = async (req, res, next) => {
       status: seller.status,
     }));
 
-    res.json(sanitizedSellers);
+    const pagination = createPaginationMetadata(page, limit, totalItems);
+
+    res.json({
+      sellers: sanitizedSellers,
+      pagination,
+    });
   } catch (error) {
     next(error);
   }

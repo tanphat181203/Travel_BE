@@ -1,4 +1,5 @@
 import { pool } from '../config/db.js';
+import { addPaginationToQuery } from '../utils/pagination.js';
 
 class User {
   static async executeQuery(query, params) {
@@ -46,21 +47,35 @@ class User {
     return result.rows[0];
   }
 
-  static async find(filter) {
-    let query = 'SELECT * FROM Users WHERE ';
+  static async find(filter, limit, offset) {
+    let baseQuery = 'SELECT * FROM Users WHERE ';
+    let countQuery = 'SELECT COUNT(*) FROM Users WHERE ';
     const values = [];
     let paramIndex = 1;
 
     Object.entries(filter).forEach(([key, value], index) => {
       const snakeCaseKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
-      if (index > 0) query += ' AND ';
-      query += `${snakeCaseKey} = $${paramIndex}`;
+      if (index > 0) {
+        baseQuery += ' AND ';
+        countQuery += ' AND ';
+      }
+      const condition = `${snakeCaseKey} = $${paramIndex}`;
+      baseQuery += condition;
+      countQuery += condition;
       values.push(value);
       paramIndex++;
     });
 
+    const countResult = await this.executeQuery(countQuery, values);
+    const totalItems = parseInt(countResult.rows[0].count);
+
+    let query = baseQuery;
+    if (limit !== undefined && offset !== undefined) {
+      query = addPaginationToQuery(query, limit, offset);
+    }
+
     const result = await this.executeQuery(query, values);
-    return result.rows;
+    return { users: result.rows, totalItems };
   }
 
   static async findByIdAndUpdate(id, updates) {

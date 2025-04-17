@@ -2,15 +2,33 @@ import Invoice from '../../models/Invoice.js';
 import Booking from '../../models/Booking.js';
 import { generateInvoiceHtml } from '../../services/invoice.service.js';
 import logger from '../../utils/logger.js';
+import {
+  getPaginationParams,
+  createPaginationMetadata,
+} from '../../utils/pagination.js';
 
 export const getUserInvoices = async (req, res) => {
   try {
     const user_id = req.user.id;
-    const invoices = await Invoice.findByUserId(user_id);
 
-    logger.info(`Retrieved ${invoices.length} invoices for user ${user_id}`);
+    const { page, limit, offset } = getPaginationParams(req.query);
 
-    res.status(200).json({ invoices });
+    const { invoices, totalItems } = await Invoice.findByUserId(
+      user_id,
+      limit,
+      offset
+    );
+
+    const pagination = createPaginationMetadata(page, limit, totalItems);
+
+    logger.info(
+      `Retrieved ${invoices.length} invoices for user ${user_id} (page ${page})`
+    );
+
+    res.status(200).json({
+      invoices,
+      pagination,
+    });
   } catch (error) {
     logger.error(`Error getting user invoices: ${error.message}`);
     res.status(500).json({ message: 'Server error', error: error.message });

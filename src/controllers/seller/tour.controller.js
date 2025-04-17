@@ -2,6 +2,10 @@ import Tour from '../../models/Tour.js';
 import { generateEmbedding } from '../../utils/embeddingHelper.js';
 import { uploadToFirebase } from '../../utils/uploadHandler.js';
 import { checkTourOwnership } from '../../utils/tourHelper.js';
+import {
+  getPaginationParams,
+  createPaginationMetadata,
+} from '../../utils/pagination.js';
 
 // Tour controllers
 export const createTour = async (req, res, next) => {
@@ -52,14 +56,26 @@ export const createTour = async (req, res, next) => {
 export const getToursBySellerId = async (req, res, next) => {
   try {
     const seller_id = req.userId;
-    const tours = await Tour.findBySellerId(seller_id);
+
+    const { page, limit, offset } = getPaginationParams(req.query);
+
+    const { tours, totalItems } = await Tour.findBySellerId(
+      seller_id,
+      limit,
+      offset
+    );
 
     const sanitizedTours = tours.map((tour) => {
       delete tour.embedding;
       return tour;
     });
 
-    return res.status(200).json(sanitizedTours);
+    const pagination = createPaginationMetadata(page, limit, totalItems);
+
+    return res.status(200).json({
+      tours: sanitizedTours,
+      pagination,
+    });
   } catch (error) {
     next(error);
   }
@@ -146,10 +162,14 @@ export const deleteTour = async (req, res, next) => {
 export const searchTours = async (req, res, next) => {
   try {
     const seller_id = req.userId;
-    const searchParams = req.query;
-    const tours = await Tour.search({ ...searchParams, seller_id });
 
-    if (tours.length === 0) {
+    const { page, limit, offset } = getPaginationParams(req.query);
+
+    const searchParams = { ...req.query, seller_id, limit, offset };
+
+    const { tours, totalItems } = await Tour.search(searchParams);
+
+    if (tours.length === 0 && page === 1) {
       return res.status(404).json({ message: 'No tours found' });
     }
 
@@ -158,7 +178,12 @@ export const searchTours = async (req, res, next) => {
       return tour;
     });
 
-    return res.status(200).json(sanitizedTours);
+    const pagination = createPaginationMetadata(page, limit, totalItems);
+
+    return res.status(200).json({
+      tours: sanitizedTours,
+      pagination,
+    });
   } catch (error) {
     next(error);
   }

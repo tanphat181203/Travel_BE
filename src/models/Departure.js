@@ -1,4 +1,5 @@
 import { pool } from '../config/db.js';
+import { addPaginationToQuery } from '../utils/pagination.js';
 
 class Departure {
   static async create(departureData) {
@@ -9,7 +10,7 @@ class Departure {
       price_child_120_140,
       price_child_100_120,
       availability = true,
-      description
+      description,
     } = departureData;
 
     const query = `
@@ -28,7 +29,7 @@ class Departure {
       price_child_120_140,
       price_child_100_120,
       availability,
-      description
+      description,
     ];
 
     const result = await pool.query(query, values);
@@ -41,10 +42,20 @@ class Departure {
     return result.rows[0];
   }
 
-  static async findByTourId(tourId) {
-    const query = 'SELECT * FROM Departure WHERE tour_id = $1 ORDER BY start_date ASC';
+  static async findByTourId(tourId, limit, offset) {
+    const countQuery = 'SELECT COUNT(*) FROM Departure WHERE tour_id = $1';
+    const countResult = await pool.query(countQuery, [tourId]);
+    const totalItems = parseInt(countResult.rows[0].count);
+
+    let query =
+      'SELECT * FROM Departure WHERE tour_id = $1 ORDER BY start_date ASC';
+
+    if (limit !== undefined && offset !== undefined) {
+      query = addPaginationToQuery(query, limit, offset);
+    }
+
     const result = await pool.query(query, [tourId]);
-    return result.rows;
+    return { departures: result.rows, totalItems };
   }
 
   static async update(departureId, updateData) {
@@ -54,17 +65,17 @@ class Departure {
       'price_child_120_140',
       'price_child_100_120',
       'availability',
-      'description'
+      'description',
     ];
 
     const setClause = Object.keys(updateData)
-      .filter(key => allowedFields.includes(key))
+      .filter((key) => allowedFields.includes(key))
       .map((key, index) => `${key} = $${index + 2}`)
       .join(', ');
 
     const values = Object.keys(updateData)
-      .filter(key => allowedFields.includes(key))
-      .map(key => updateData[key]);
+      .filter((key) => allowedFields.includes(key))
+      .map((key) => updateData[key]);
 
     if (values.length === 0) return null;
 
@@ -80,48 +91,70 @@ class Departure {
   }
 
   static async delete(departureId) {
-    const checkBookingsQuery = 'SELECT COUNT(*) FROM Booking WHERE departure_id = $1';
+    const checkBookingsQuery =
+      'SELECT COUNT(*) FROM Booking WHERE departure_id = $1';
     const bookingsResult = await pool.query(checkBookingsQuery, [departureId]);
     const bookingsCount = parseInt(bookingsResult.rows[0].count);
-    
+
     if (bookingsCount > 0) {
       throw new Error('Cannot delete departure with existing bookings');
     }
-    
+
     const query = 'DELETE FROM Departure WHERE departure_id = $1 RETURNING *';
     const result = await pool.query(query, [departureId]);
     return result.rows[0];
   }
 
   static async search(searchParams) {
-    let query = 'SELECT * FROM Departure WHERE 1=1';
+    let baseQuery = 'SELECT * FROM Departure WHERE 1=1';
+    let countQuery = 'SELECT COUNT(*) FROM Departure WHERE 1=1';
     const values = [];
     let paramIndex = 1;
 
     if (searchParams.tour_id) {
-      query += ` AND tour_id = $${paramIndex++}`;
+      const condition = ` AND tour_id = $${paramIndex++}`;
+      baseQuery += condition;
+      countQuery += condition;
       values.push(searchParams.tour_id);
     }
 
     if (searchParams.start_date_from) {
-      query += ` AND start_date >= $${paramIndex++}`;
+      const condition = ` AND start_date >= $${paramIndex++}`;
+      baseQuery += condition;
+      countQuery += condition;
       values.push(searchParams.start_date_from);
     }
 
     if (searchParams.start_date_to) {
-      query += ` AND start_date <= $${paramIndex++}`;
+      const condition = ` AND start_date <= $${paramIndex++}`;
+      baseQuery += condition;
+      countQuery += condition;
       values.push(searchParams.start_date_to);
     }
 
     if (searchParams.availability !== undefined) {
-      query += ` AND availability = $${paramIndex++}`;
+      const condition = ` AND availability = $${paramIndex++}`;
+      baseQuery += condition;
+      countQuery += condition;
       values.push(searchParams.availability);
     }
 
-    query += ' ORDER BY start_date ASC';
+    baseQuery += ' ORDER BY start_date ASC';
+
+    const countResult = await pool.query(countQuery, values);
+    const totalItems = parseInt(countResult.rows[0].count);
+
+    let query = baseQuery;
+    if (searchParams.limit !== undefined && searchParams.offset !== undefined) {
+      query = addPaginationToQuery(
+        query,
+        searchParams.limit,
+        searchParams.offset
+      );
+    }
 
     const result = await pool.query(query, values);
-    return result.rows;
+    return { departures: result.rows, totalItems };
   }
 }
 

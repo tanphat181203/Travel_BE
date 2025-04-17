@@ -1,8 +1,18 @@
 import User from '../../models/User.js';
+import {
+  getPaginationParams,
+  createPaginationMetadata,
+} from '../../utils/pagination.js';
 
 export const listUsers = async (req, res, next) => {
   try {
-    const users = await User.find({ role: 'user' });
+    const { page, limit, offset } = getPaginationParams(req.query);
+
+    const { users, totalItems } = await User.find(
+      { role: 'user' },
+      limit,
+      offset
+    );
 
     const sanitizedUsers = users.map((user) => {
       const userObj = { ...user };
@@ -12,7 +22,12 @@ export const listUsers = async (req, res, next) => {
       return userObj;
     });
 
-    res.json(sanitizedUsers);
+    const pagination = createPaginationMetadata(page, limit, totalItems);
+
+    res.json({
+      users: sanitizedUsers,
+      pagination,
+    });
   } catch (error) {
     next(error);
   }
@@ -68,7 +83,7 @@ export const updateUser = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-}
+};
 
 export const deleteUser = async (req, res, next) => {
   try {

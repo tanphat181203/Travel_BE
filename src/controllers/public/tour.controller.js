@@ -1,4 +1,8 @@
 import Tour from '../../models/Tour.js';
+import {
+  getPaginationParams,
+  createPaginationMetadata,
+} from '../../utils/pagination.js';
 
 export const getTourById = async (req, res, next) => {
   try {
@@ -10,7 +14,6 @@ export const getTourById = async (req, res, next) => {
       return res.status(404).json({ message: 'Tour not found' });
     }
 
-    // Remove sensitive data
     delete tour.embedding;
 
     return res.status(200).json(tour);
@@ -21,19 +24,26 @@ export const getTourById = async (req, res, next) => {
 
 export const searchTours = async (req, res, next) => {
   try {
-    const searchParams = req.query;
-    const tours = await Tour.search(searchParams);
+    const { page, limit, offset } = getPaginationParams(req.query);
 
-    if (tours.length === 0) {
+    const searchParams = { ...req.query, limit, offset };
+
+    const { tours, totalItems } = await Tour.search(searchParams);
+
+    if (tours.length === 0 && page === 1) {
       return res.status(404).json({ message: 'No tours found' });
     }
 
-    // Remove sensitive data
     tours.forEach((tour) => {
       delete tour.embedding;
     });
 
-    return res.status(200).json(tours);
+    const pagination = createPaginationMetadata(page, limit, totalItems);
+
+    return res.status(200).json({
+      tours,
+      pagination,
+    });
   } catch (error) {
     next(error);
   }
@@ -43,24 +53,36 @@ export const semanticSearch = async (req, res, next) => {
   try {
     const { query } = req.body;
 
+    const page = parseInt(req.body.page) || 1;
+    const limit = parseInt(req.body.limit) || 10;
+    const offset = (page - 1) * limit;
+
     if (!query) {
       return res.status(400).json({ message: 'Query is required' });
     }
 
-    const tours = await Tour.semanticSearch(query);
+    const { tours, totalItems } = await Tour.semanticSearch(
+      query,
+      limit,
+      offset
+    );
 
-    if (tours.length === 0) {
+    if (tours.length === 0 && page === 1) {
       return res
         .status(404)
         .json({ message: 'No tours found matching your query' });
     }
 
-    // Remove sensitive data
     tours.forEach((tour) => {
       delete tour.embedding;
     });
 
-    return res.status(200).json(tours);
+    const pagination = createPaginationMetadata(page, limit, totalItems);
+
+    return res.status(200).json({
+      tours,
+      pagination,
+    });
   } catch (error) {
     next(error);
   }
