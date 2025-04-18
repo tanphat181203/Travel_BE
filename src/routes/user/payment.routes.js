@@ -29,7 +29,7 @@ const router = express.Router();
  *                 description: ID of the booking to pay for
  *               payment_method:
  *                 type: string
- *                 enum: [vnpay, direct_to_seller]
+ *                 enum: [vnpay, stripe, direct_to_seller]
  *                 description: Payment method to use (default is vnpay)
  *     responses:
  *       200:
@@ -60,6 +60,17 @@ const router = express.Router();
  *                       enum: [awaiting_seller_confirmation]
  *                     booking_id:
  *                       type: integer
+ *                 - type: object
+ *                   properties:
+ *                     message:
+ *                       type: string
+ *                     paymentUrl:
+ *                       type: string
+ *                       description: URL to redirect the user to Stripe's hosted checkout page
+ *                     checkout_id:
+ *                       type: integer
+ *                     transaction_id:
+ *                       type: string
  *       400:
  *         description: Invalid input, booking already paid, or invalid payment method
  *       401:
@@ -148,5 +159,32 @@ router.get('/vnpay-return', requestLogger, paymentController.vnpayReturn);
  *         description: IPN response
  */
 router.get('/vnpay-ipn', requestLogger, paymentController.vnpayIPN);
+
+/**
+ * @swagger
+ * /user/payments/stripe-webhook:
+ *   post:
+ *     tags:
+ *       - User - Payment Management
+ *     summary: Stripe webhook endpoint
+ *     description: Endpoint for Stripe to send payment notifications
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Webhook processed successfully
+ *       400:
+ *         description: Error processing webhook
+ */
+// Special route for Stripe webhooks - needs raw body for signature verification
+router.post(
+  '/stripe-webhook',
+  express.raw({ type: 'application/json' }),
+  paymentController.stripeWebhook
+);
 
 export default router;

@@ -8,10 +8,13 @@ import {
   IpnUnknownError,
   IpnSuccess,
 } from 'vnpay';
+import Stripe from 'stripe';
 import dotenv from 'dotenv';
 import logger from '../utils/logger.js';
 
 dotenv.config();
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 const vnpay = new VNPay({
   tmnCode: process.env.VNPAY_TMNCODE,
@@ -26,7 +29,7 @@ const vnpay = new VNPay({
 export const generatePaymentUrl = (amount, bookingId, orderInfo, ipAddr) => {
   try {
     const txnRef = `${bookingId}-${Date.now()}`;
-    
+
     // const tomorrow = new Date();
     // tomorrow.setDate(tomorrow.getDate() + 1);
 
@@ -42,7 +45,9 @@ export const generatePaymentUrl = (amount, bookingId, orderInfo, ipAddr) => {
       // vnp_ExpireDate: dateFormat(tomorrow),
     });
 
-    logger.info(`Generated VNPay payment URL for booking: ${bookingId}, txnRef: ${txnRef}`);
+    logger.info(
+      `Generated VNPay payment URL for booking: ${bookingId}, txnRef: ${txnRef}`
+    );
     return { paymentUrl, txnRef };
   } catch (error) {
     logger.error(`Error generating VNPay payment URL: ${error.message}`);
@@ -53,7 +58,9 @@ export const generatePaymentUrl = (amount, bookingId, orderInfo, ipAddr) => {
 export const verifyReturnUrl = (queryParams) => {
   try {
     const verify = vnpay.verifyReturnUrl(queryParams);
-    logger.info(`VNPay return URL verification: isVerified=${verify.isVerified}, isSuccess=${verify.isSuccess}`);
+    logger.info(
+      `VNPay return URL verification: isVerified=${verify.isVerified}, isSuccess=${verify.isSuccess}`
+    );
     return verify;
   } catch (error) {
     logger.error(`Error verifying VNPay return URL: ${error.message}`);
@@ -81,4 +88,104 @@ export const getIpnResponse = (isSuccess) => {
 
 export const getErrorResponse = () => {
   return IpnUnknownError;
+};
+
+export const createStripePaymentIntent = async (
+  amount,
+  bookingId,
+  metadata = {}
+) => {
+  try {
+    const amountInVND = Math.round(amount);
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amountInVND,
+      currency: 'vnd',
+      metadata: {
+        booking_id: bookingId,
+        ...metadata,
+      },
+    });
+
+    logger.info(
+      `Created Stripe payment intent for booking: ${bookingId}, id: ${paymentIntent.id}`
+    );
+    return paymentIntent;
+  } catch (error) {
+    logger.error(`Error creating Stripe payment intent: ${error.message}`);
+    throw error;
+  }
+};
+
+export const retrievePaymentIntent = async (paymentIntentId) => {
+  try {
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    logger.info(`Retrieved Stripe payment intent: ${paymentIntentId}`);
+    return paymentIntent;
+  } catch (error) {
+    logger.error(`Error retrieving Stripe payment intent: ${error.message}`);
+    throw error;
+  }
+};
+
+export const constructStripeEvent = (payload, signature) => {
+  try {
+    const event = stripe.webhooks.constructEvent(
+      payload,
+      signature,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+    logger.info(`Constructed Stripe webhook event: ${event.type}`);
+    return event;
+  } catch (error) {
+    logger.error(`Error constructing Stripe webhook event: ${error.message}`);
+    throw error;
+  }
+};
+
+export const createStripeCheckoutSession = async (
+  amount,
+  bookingId,
+  orderInfo,
+  successUrl,
+  cancelUrl
+) => {
+  try {
+    const amountInVND = Math.round(amount);
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'vnd',
+            product_data: {
+              name: orderInfo || `Booking #${bookingId}`,
+              description: `Payment for booking #${bookingId}`,
+            },
+            unit_amount: amountInVND,
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'payment',
+      success_url:
+        successUrl ||
+        `${process.env.CLIENT_URL}/payment/success?payment_method=stripe&booking_id=${bookingId}`,
+      cancel_url:
+        cancelUrl ||
+        `${process.env.CLIENT_URL}/payment/failed?payment_method=stripe&reason=cancelled&booking_id=${bookingId}`,
+      metadata: {
+        booking_id: bookingId,
+      },
+    });
+
+    logger.info(
+      `Created Stripe checkout session for booking: ${bookingId}, session id: ${session.id}`
+    );
+    return session;
+  } catch (error) {
+    logger.error(`Error creating Stripe checkout session: ${error.message}`);
+    throw error;
+  }
 };

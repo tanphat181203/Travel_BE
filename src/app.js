@@ -14,7 +14,15 @@ import publicRoutes from './routes/public/index.js';
 
 const app = express();
 
-app.use(express.json());
+// Apply JSON parsing middleware to all routes except Stripe webhooks
+app.use((req, res, next) => {
+  if (req.originalUrl === '/api/user/payments/stripe-webhook') {
+    next();
+  } else {
+    express.json()(req, res, next);
+  }
+});
+
 app.use(cors());
 app.use(passport.initialize());
 
