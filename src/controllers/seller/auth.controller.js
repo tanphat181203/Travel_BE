@@ -8,7 +8,7 @@ import {
   generateRefreshToken,
   verifyRefreshToken,
 } from '../../utils/jwtHelper.js';
-import sendEmail from '../../services/emailService.js';
+import sendEmail from '../../services/email.service.js';
 
 export const registerSeller = async (req, res, next) => {
   try {
