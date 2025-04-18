@@ -22,6 +22,10 @@ pool.on('error', (err) => {
   logger.error('Unexpected error on idle client', err);
 });
 
+pool.on('connect', (client) => {
+  client.query('SET timezone = "Asia/Bangkok"');
+});
+
 const connectDB = async () => {
   let retries = 5;
   while (retries) {

@@ -58,8 +58,8 @@ CREATE TABLE IF NOT EXISTS SellerSubscription (
     subscription_id SERIAL PRIMARY KEY,
     seller_id INTEGER NOT NULL REFERENCES Users(id),
     package_id INTEGER NOT NULL REFERENCES SubscriptionPackage(package_id),
-    purchase_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    expiry_date TIMESTAMP NOT NULL,
+    purchase_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    expiry_date TIMESTAMPTZ NOT NULL,
     status VARCHAR(50),
     payment_method VARCHAR(50) NOT NULL,
     transaction_id VARCHAR(255)
@@ -71,14 +71,14 @@ CREATE TABLE IF NOT EXISTS History (
     user_id INTEGER NOT NULL REFERENCES Users(id),
     tour_id INTEGER NOT NULL REFERENCES Tour(tour_id),
     action_type VARCHAR(50) NOT NULL,
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 7. ChatbotHistory
 CREATE TABLE IF NOT EXISTS ChatbotHistory (
     history_id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES Users(id),
-    interaction_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    interaction_time TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     message TEXT NOT NULL,
     response TEXT
 );
@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS Review (
     user_id INTEGER NOT NULL REFERENCES Users(id),
     rating INTEGER CHECK (rating >= 1 AND rating <= 5),
     comment TEXT,
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 9. Booking
@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS Booking (
     total_price DECIMAL(10,2) NOT NULL,
     booking_status VARCHAR(50) NOT NULL,
     special_requests TEXT,
-    booking_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    booking_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 10. Images
@@ -114,7 +114,7 @@ CREATE TABLE IF NOT EXISTS Images (
     image_url VARCHAR(255) NOT NULL,
     description TEXT,
     is_cover BOOLEAN DEFAULT false,
-    upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    upload_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 11. Invoice
@@ -122,7 +122,7 @@ CREATE TABLE IF NOT EXISTS Invoice (
     invoice_id SERIAL PRIMARY KEY,
     booking_id INTEGER NOT NULL REFERENCES Booking(booking_id),
     amount_due DECIMAL(10,2) NOT NULL,
-    date_issued TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    date_issued TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     details TEXT
 );
 
@@ -131,7 +131,7 @@ CREATE TABLE IF NOT EXISTS Checkout (
     checkout_id SERIAL PRIMARY KEY,
     booking_id INTEGER NOT NULL REFERENCES Booking(booking_id),
     payment_method VARCHAR(50) NOT NULL,
-    payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    payment_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     amount DECIMAL(10,2) NOT NULL,
     payment_status VARCHAR(50) NOT NULL,
     transaction_id VARCHAR(255)
@@ -173,11 +173,13 @@ CREATE INDEX IF NOT EXISTS idx_subscriptionpackage_status ON SubscriptionPackage
 CREATE INDEX IF NOT EXISTS idx_sellersubscription_seller_id ON SellerSubscription(seller_id);
 CREATE INDEX IF NOT EXISTS idx_sellersubscription_package_id ON SellerSubscription(package_id);
 CREATE INDEX IF NOT EXISTS idx_sellersubscription_status ON SellerSubscription(status);
+CREATE INDEX IF NOT EXISTS idx_sellersubscription_purchase_date ON SellerSubscription(purchase_date);
+CREATE INDEX IF NOT EXISTS idx_sellersubscription_expiry_date ON SellerSubscription(expiry_date);
 
 CREATE INDEX IF NOT EXISTS idx_history_user_id ON History(user_id);
 CREATE INDEX IF NOT EXISTS idx_history_tour_id ON History(tour_id);
 CREATE INDEX IF NOT EXISTS idx_history_action_type ON History(action_type);
-CREATE INDEX IF NOT EXISTS idx_history_timestamp ON History(timestamp);
+CREATE INDEX IF NOT EXISTS idx_history_timestamp ON History("timestamp");
 
 CREATE INDEX IF NOT EXISTS idx_chatbothistory_user_id ON ChatbotHistory(user_id);
 CREATE INDEX IF NOT EXISTS idx_chatbothistory_interaction_time ON ChatbotHistory(interaction_time);
@@ -185,7 +187,7 @@ CREATE INDEX IF NOT EXISTS idx_chatbothistory_interaction_time ON ChatbotHistory
 CREATE INDEX IF NOT EXISTS idx_review_tour_id ON Review(tour_id);
 CREATE INDEX IF NOT EXISTS idx_review_user_id ON Review(user_id);
 CREATE INDEX IF NOT EXISTS idx_review_rating ON Review(rating);
-CREATE INDEX IF NOT EXISTS idx_review_timestamp ON Review(timestamp);
+CREATE INDEX IF NOT EXISTS idx_review_timestamp ON Review("timestamp");
 
 CREATE INDEX IF NOT EXISTS idx_booking_departure_id ON Booking(departure_id);
 CREATE INDEX IF NOT EXISTS idx_booking_user_id ON Booking(user_id);
