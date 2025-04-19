@@ -116,6 +116,52 @@ router.get(
 
 /**
  * @swagger
+ * /public/departures/{departureId}/capacity:
+ *   get:
+ *     tags:
+ *       - Public Departures
+ *     summary: Get departure capacity information
+ *     description: Get information about the maximum capacity, current participants, and remaining capacity for a departure
+ *     parameters:
+ *       - in: path
+ *         name: departureId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Departure ID
+ *     responses:
+ *       200:
+ *         description: Departure capacity information
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 departure_id:
+ *                   type: integer
+ *                 tour_id:
+ *                   type: integer
+ *                 max_participants:
+ *                   type: integer
+ *                 current_participants:
+ *                   type: integer
+ *                 remaining_capacity:
+ *                   type: integer
+ *                 is_full:
+ *                   type: boolean
+ *       404:
+ *         description: Departure not found, not available, or associated tour not available
+ *       500:
+ *         description: Server error
+ */
+router.get(
+  '/departures/:departureId/capacity',
+  requestLogger,
+  departureController.getDepartureCapacity
+);
+
+/**
+ * @swagger
  * /public/departures:
  *   get:
  *     tags:

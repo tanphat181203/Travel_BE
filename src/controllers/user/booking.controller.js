@@ -55,9 +55,12 @@ export const createBooking = async (req, res) => {
     const totalParticipants =
       num_adults + (num_children_120_140 || 0) + (num_children_100_120 || 0);
 
-    if (totalParticipants > tour.max_participants) {
+    const { remainingCapacity, currentParticipants, maxParticipants } =
+      await Booking.getRemainingCapacity(departure_id);
+
+    if (totalParticipants > remainingCapacity) {
       return res.status(400).json({
-        message: `Booking exceeds maximum capacity of ${tour.max_participants} participants`,
+        message: `Booking exceeds remaining capacity. Current bookings: ${currentParticipants}, Maximum capacity: ${maxParticipants}, Your booking: ${totalParticipants}, Remaining: ${remainingCapacity}`,
       });
     }
 
@@ -84,6 +87,15 @@ export const createBooking = async (req, res) => {
     logger.info(
       `User ${user_id} created booking ${booking.booking_id} for departure ${departure_id}`
     );
+
+    const updatedCapacity = await Booking.getRemainingCapacity(departure_id);
+
+    if (updatedCapacity.remainingCapacity <= 0 && departure.availability) {
+      await Departure.update(departure_id, { availability: false });
+      logger.info(
+        `Departure ${departure_id} automatically marked as unavailable due to reaching maximum capacity`
+      );
+    }
 
     res.status(201).json({
       message: 'Booking created successfully',
@@ -180,6 +192,27 @@ export const cancelBooking = async (req, res) => {
     const updatedBooking = await Booking.updateStatus(id, 'cancelled');
 
     logger.info(`User ${user_id} cancelled booking ${id}`);
+
+    const departure = await Departure.findById(booking.departure_id);
+
+    if (!departure.availability) {
+      const updatedCapacity = await Booking.getRemainingCapacity(
+        booking.departure_id
+      );
+
+      if (updatedCapacity.remainingCapacity > 0) {
+        const currentDate = new Date();
+        currentDate.setHours(0, 0, 0, 0);
+        const departureDate = new Date(departure.start_date);
+
+        if (departureDate >= currentDate) {
+          await Departure.update(booking.departure_id, { availability: true });
+          logger.info(
+            `Departure ${booking.departure_id} automatically marked as available again after booking cancellation`
+          );
+        }
+      }
+    }
 
     res.status(200).json({
       message: 'Booking cancelled successfully',

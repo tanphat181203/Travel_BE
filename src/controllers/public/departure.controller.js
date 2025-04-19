@@ -1,5 +1,6 @@
 import Departure from '../../models/Departure.js';
 import Tour from '../../models/Tour.js';
+import Booking from '../../models/Booking.js';
 import {
   getPaginationParams,
   createPaginationMetadata,
@@ -72,6 +73,44 @@ export const getDepartureById = async (req, res, next) => {
     }
 
     return res.status(200).json(departure);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getDepartureCapacity = async (req, res, next) => {
+  try {
+    const departureId = req.params.departureId;
+
+    const departure = await Departure.findById(departureId);
+    if (!departure) {
+      return res.status(404).json({ message: 'Departure not found' });
+    }
+
+    const tour = await Tour.findById(departure.tour_id);
+    if (!tour || !tour.availability) {
+      return res.status(404).json({ message: 'Tour is not available' });
+    }
+
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0);
+    const departureDate = new Date(departure.start_date);
+
+    if (!departure.availability || departureDate < currentDate) {
+      return res.status(404).json({ message: 'Departure is not available' });
+    }
+
+    // Get capacity information
+    const capacityInfo = await Booking.getRemainingCapacity(departureId);
+
+    return res.status(200).json({
+      departure_id: parseInt(departureId),
+      tour_id: departure.tour_id,
+      max_participants: capacityInfo.maxParticipants,
+      current_participants: capacityInfo.currentParticipants,
+      remaining_capacity: capacityInfo.remainingCapacity,
+      is_full: capacityInfo.remainingCapacity <= 0,
+    });
   } catch (error) {
     next(error);
   }

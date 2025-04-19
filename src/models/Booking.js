@@ -394,6 +394,66 @@ class Booking {
       throw error;
     }
   }
+  static async getCurrentParticipantsCount(departureId) {
+    const query = `
+      SELECT
+        SUM(num_adults + num_children_120_140 + num_children_100_120) as total_participants
+      FROM Booking
+      WHERE departure_id = $1
+      AND booking_status NOT IN ('cancelled')
+    `;
+
+    try {
+      const result = await pool.query(query, [departureId]);
+      const totalParticipants =
+        parseInt(result.rows[0].total_participants) || 0;
+      logger.info(
+        `Current participants count for departure ${departureId}: ${totalParticipants}`
+      );
+      return totalParticipants;
+    } catch (error) {
+      logger.error(
+        `Error calculating current participants count: ${error.message}`
+      );
+      throw error;
+    }
+  }
+
+  static async getRemainingCapacity(departureId) {
+    try {
+      const tourQuery = `
+        SELECT t.max_participants
+        FROM Tour t
+        JOIN Departure d ON t.tour_id = d.tour_id
+        WHERE d.departure_id = $1
+      `;
+
+      const tourResult = await pool.query(tourQuery, [departureId]);
+
+      if (tourResult.rows.length === 0) {
+        throw new Error('Tour not found for this departure');
+      }
+
+      const maxParticipants = tourResult.rows[0].max_participants;
+      const currentParticipants = await this.getCurrentParticipantsCount(
+        departureId
+      );
+
+      const remainingCapacity = maxParticipants - currentParticipants;
+      logger.info(
+        `Remaining capacity for departure ${departureId}: ${remainingCapacity}`
+      );
+
+      return {
+        maxParticipants,
+        currentParticipants,
+        remainingCapacity,
+      };
+    } catch (error) {
+      logger.error(`Error calculating remaining capacity: ${error.message}`);
+      throw error;
+    }
+  }
 }
 
 export default Booking;
