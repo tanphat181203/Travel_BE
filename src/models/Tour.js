@@ -115,6 +115,15 @@ class Tour {
 
     tour.images = imagesResult.rows;
 
+    if (tour.availability) {
+      const nextDeparture = await this.getNextAvailableDeparture(tour.tour_id);
+      if (nextDeparture) {
+        tour.next_departure_adult_price = nextDeparture.price_adult;
+        tour.next_departure_id = nextDeparture.departure_id;
+        tour.next_departure_date = nextDeparture.start_date;
+      }
+    }
+
     return tour;
   }
 
@@ -151,9 +160,20 @@ class Tour {
       imagesByTourId[image.tour_id].push(image);
     });
 
-    tours.forEach((tour) => {
+    for (const tour of tours) {
       tour.images = imagesByTourId[tour.tour_id] || [];
-    });
+
+      if (tour.availability) {
+        const nextDeparture = await this.getNextAvailableDeparture(
+          tour.tour_id
+        );
+        if (nextDeparture) {
+          tour.next_departure_adult_price = nextDeparture.price_adult;
+          tour.next_departure_id = nextDeparture.departure_id;
+          tour.next_departure_date = nextDeparture.start_date;
+        }
+      }
+    }
 
     return { tours, totalItems };
   }
@@ -186,42 +206,123 @@ class Tour {
     }
   }
 
+  static async getNextAvailableDeparture(tourId) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const formattedDate = today.toISOString().split('T')[0];
+
+    const query = `
+      SELECT * FROM Departure
+      WHERE tour_id = $1
+      AND start_date >= $2
+      AND availability = true
+      ORDER BY start_date ASC
+      LIMIT 1
+    `;
+
+    const result = await pool.query(query, [tourId, formattedDate]);
+    return result.rows[0] || null;
+  }
+
   static async search(searchParams) {
-    let query = 'SELECT * FROM Tour WHERE 1=1';
-    let countQuery = 'SELECT COUNT(*) FROM Tour WHERE 1=1';
+    let query = 'SELECT DISTINCT t.* FROM Tour t';
+    let countQuery = 'SELECT COUNT(DISTINCT t.tour_id) FROM Tour t';
+    let joinDeparture = false;
     const values = [];
     let paramIndex = 1;
+    let whereClause = ' WHERE 1=1';
+
+    if (
+      searchParams.min_price !== undefined ||
+      searchParams.max_price !== undefined
+    ) {
+      joinDeparture = true;
+    }
+
+    if (joinDeparture) {
+      query += ' LEFT JOIN Departure d ON t.tour_id = d.tour_id';
+      countQuery += ' LEFT JOIN Departure d ON t.tour_id = d.tour_id';
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const formattedDate = today.toISOString().split('T')[0];
+
+      whereClause += ` AND (d.availability = true AND d.start_date >= '${formattedDate}')`;
+    }
+
+    query += whereClause;
+    countQuery += whereClause;
 
     if (searchParams.region) {
-      const condition = ` AND region = $${paramIndex++}`;
+      const condition = ` AND t.region = $${paramIndex++}`;
       query += condition;
       countQuery += condition;
       values.push(searchParams.region);
     }
 
     if (searchParams.destination) {
-      const condition = ` AND destination @> ARRAY[$${paramIndex++}]`;
+      const condition = ` AND t.destination @> ARRAY[$${paramIndex++}]`;
       query += condition;
       countQuery += condition;
       values.push(searchParams.destination);
     }
 
     if (searchParams.availability !== undefined) {
-      const condition = ` AND availability = $${paramIndex++}`;
+      const condition = ` AND t.availability = $${paramIndex++}`;
       query += condition;
       countQuery += condition;
       values.push(searchParams.availability);
     }
 
     if (searchParams.seller_id) {
-      const condition = ` AND seller_id = $${paramIndex++}`;
+      const condition = ` AND t.seller_id = $${paramIndex++}`;
       query += condition;
       countQuery += condition;
       values.push(searchParams.seller_id);
     }
 
+    if (searchParams.min_price !== undefined) {
+      const minPrice = parseFloat(searchParams.min_price);
+      if (!isNaN(minPrice)) {
+        const condition = ` AND d.price_adult >= $${paramIndex++}`;
+        query += condition;
+        countQuery += condition;
+        values.push(minPrice);
+      }
+    }
+
+    if (searchParams.max_price !== undefined) {
+      const maxPrice = parseFloat(searchParams.max_price);
+      if (!isNaN(maxPrice)) {
+        const condition = ` AND d.price_adult <= $${paramIndex++}`;
+        query += condition;
+        countQuery += condition;
+        values.push(maxPrice);
+      }
+    }
+
+    if (searchParams.duration !== undefined) {
+      const condition = ` AND t.duration ILIKE $${paramIndex++}`;
+      query += condition;
+      countQuery += condition;
+      values.push(`%${searchParams.duration}%`);
+    }
+    if (searchParams.num_people !== undefined) {
+      const numPeople = parseInt(searchParams.num_people);
+      if (!isNaN(numPeople)) {
+        const condition = ` AND t.max_participants >= $${paramIndex++}`;
+        query += condition;
+        countQuery += condition;
+        values.push(numPeople);
+      }
+    }
+
     const countResult = await pool.query(countQuery, values);
     const totalItems = parseInt(countResult.rows[0].count);
+
+    if (!query.includes('ORDER BY')) {
+      query += ' ORDER BY t.tour_id';
+    }
 
     if (searchParams.limit !== undefined && searchParams.offset !== undefined) {
       query = addPaginationToQuery(
@@ -253,9 +354,20 @@ class Tour {
       imagesByTourId[image.tour_id].push(image);
     });
 
-    tours.forEach((tour) => {
+    for (const tour of tours) {
       tour.images = imagesByTourId[tour.tour_id] || [];
-    });
+
+      if (tour.availability) {
+        const nextDeparture = await this.getNextAvailableDeparture(
+          tour.tour_id
+        );
+        if (nextDeparture) {
+          tour.next_departure_adult_price = nextDeparture.price_adult;
+          tour.next_departure_id = nextDeparture.departure_id;
+          tour.next_departure_date = nextDeparture.start_date;
+        }
+      }
+    }
 
     return { tours, totalItems };
   }
@@ -266,14 +378,14 @@ class Tour {
 
     const countQuery = `
       SELECT COUNT(*) FROM Tour
-      WHERE embedding <=> $1 < 0.5
+      WHERE embedding <=> $1 < 1.2
     `;
     const countResult = await pool.query(countQuery, [embedding]);
     const totalItems = parseInt(countResult.rows[0].count);
 
     const searchQuery = `
       SELECT * FROM Tour
-      WHERE embedding <=> $1 < 0.5
+      WHERE embedding <=> $1 < 1.2
       ORDER BY embedding <=> $1
       LIMIT ${limit} OFFSET ${offset}
     `;
@@ -299,9 +411,20 @@ class Tour {
       imagesByTourId[image.tour_id].push(image);
     });
 
-    tours.forEach((tour) => {
+    for (const tour of tours) {
       tour.images = imagesByTourId[tour.tour_id] || [];
-    });
+
+      if (tour.availability) {
+        const nextDeparture = await this.getNextAvailableDeparture(
+          tour.tour_id
+        );
+        if (nextDeparture) {
+          tour.next_departure_adult_price = nextDeparture.price_adult;
+          tour.next_departure_id = nextDeparture.departure_id;
+          tour.next_departure_date = nextDeparture.start_date;
+        }
+      }
+    }
 
     return { tours, totalItems };
   }

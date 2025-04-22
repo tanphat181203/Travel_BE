@@ -23,8 +23,14 @@ const generateTourText = (tour) => {
     ? 'hiện đang có sẵn'
     : 'hiện không có sẵn';
 
-  return `Tour du lịch '${tour.title}' kéo dài ${tour.duration}, khởi hành từ ${tour.departure_location}. ${convert(tour.description)}. Tour bao gồm các điểm đến: ${destinationList}, nằm ở ${regionName}. Lịch trình chi tiết: ${itinerarySummary} Tour có sức chứa tối đa ${tour.max_participants} người và ${availabilityStatus}.`;
-}
+  return `Tour du lịch '${tour.title}' kéo dài ${tour.duration}, khởi hành từ ${
+    tour.departure_location
+  }. ${convert(
+    tour.description
+  )}. Tour bao gồm các điểm đến: ${destinationList}, nằm ở ${regionName}. Lịch trình chi tiết: ${itinerarySummary} Tour có sức chứa tối đa ${
+    tour.max_participants
+  } người và ${availabilityStatus}.`;
+};
 
 const formatEmbeddingForPgVector = (embeddingData) => {
   let vector = embeddingData;
@@ -33,7 +39,7 @@ const formatEmbeddingForPgVector = (embeddingData) => {
   }
 
   return '[' + vector.join(',') + ']';
-}
+};
 
 export const generateEmbedding = async (tourData) => {
   try {
@@ -54,4 +60,4 @@ export const generateEmbedding = async (tourData) => {
     console.error('Error generating embedding:', error);
     throw error;
   }
-}
+};

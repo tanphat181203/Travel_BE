@@ -28,6 +28,26 @@ const router = express.Router();
  *         schema:
  *           type: boolean
  *         description: Filter by availability status
+ *       - in: query
+ *         name: min_price
+ *         schema:
+ *           type: number
+ *         description: Minimum price for tour (based on adult price)
+ *       - in: query
+ *         name: max_price
+ *         schema:
+ *           type: number
+ *         description: Maximum price for tour (based on adult price)
+ *       - in: query
+ *         name: duration
+ *         schema:
+ *           type: string
+ *         description: Duration (e.g., "4", "4 ngày 3 đêm")
+ *       - in: query
+ *         name: num_people
+ *         schema:
+ *           type: integer
+ *         description: Minimum number of people the tour should accommodate
  *     responses:
  *       200:
  *         description: Search results
@@ -168,7 +188,11 @@ router.post('/semantic-search', requestLogger, tourController.semanticSearch);
  *       500:
  *         description: Server error
  */
-router.get('/departure-locations', requestLogger, tourController.getDepartureLocations);
+router.get(
+  '/departure-locations',
+  requestLogger,
+  tourController.getDepartureLocations
+);
 
 /**
  * @swagger
