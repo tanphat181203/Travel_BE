@@ -188,7 +188,7 @@ class Tour {
 
   static async search(searchParams) {
     let query = 'SELECT * FROM Tour WHERE 1=1';
-    const countQuery = 'SELECT COUNT(*) FROM Tour WHERE 1=1';
+    let countQuery = 'SELECT COUNT(*) FROM Tour WHERE 1=1';
     const values = [];
     let paramIndex = 1;
 
@@ -421,7 +421,7 @@ class Tour {
 
   static async getLocations() {
     const query = `
-      SELECT 
+      SELECT
         DISTINCT departure_location,
         UNNEST(destination) as destination
       FROM Tour
