@@ -411,6 +411,33 @@ class Tour {
     const result = await pool.query(query, [tourId]);
     return result.rows;
   }
+
+  static async getDepartureLocations() {
+    const query =
+      'SELECT DISTINCT departure_location FROM Tour ORDER BY departure_location';
+    const result = await pool.query(query);
+    return result.rows.map((row) => row.departure_location);
+  }
+
+  static async getLocations() {
+    const query = `
+      SELECT 
+        DISTINCT departure_location,
+        UNNEST(destination) as destination
+      FROM Tour
+      WHERE availability = true
+      ORDER BY departure_location, destination;
+    `;
+
+    const result = await pool.query(query);
+
+    return {
+      departure_locations: [
+        ...new Set(result.rows.map((row) => row.departure_location)),
+      ],
+      destinations: [...new Set(result.rows.map((row) => row.destination))],
+    };
+  }
 }
 
 export default Tour;

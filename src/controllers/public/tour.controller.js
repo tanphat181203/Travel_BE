@@ -87,3 +87,21 @@ export const semanticSearch = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getDepartureLocations = async (req, res, next) => {
+  try {
+    const locations = await Tour.getDepartureLocations();
+    res.status(200).json(locations);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getLocations = async (req, res, next) => {
+  try {
+    const locations = await Tour.getLocations();
+    res.status(200).json(locations);
+  } catch (error) {
+    next(error);
+  }
+};

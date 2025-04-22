@@ -150,6 +150,57 @@ router.post('/semantic-search', requestLogger, tourController.semanticSearch);
 
 /**
  * @swagger
+ * /public/tours/departure-locations:
+ *   get:
+ *     tags:
+ *       - Public Tours
+ *     summary: Get departure locations
+ *     description: Get a list of unique departure locations for all tours
+ *     responses:
+ *       200:
+ *         description: List of departure locations
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: string
+ *       500:
+ *         description: Server error
+ */
+router.get('/departure-locations', requestLogger, tourController.getDepartureLocations);
+
+/**
+ * @swagger
+ * /public/tours/locations:
+ *   get:
+ *     tags:
+ *       - Public Tours
+ *     summary: Get all locations
+ *     description: Get lists of departure locations and destinations for all tours
+ *     responses:
+ *       200:
+ *         description: Lists of locations
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 departure_locations:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                 destinations:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *       500:
+ *         description: Server error
+ */
+router.get('/locations', requestLogger, tourController.getLocations);
+
+/**
+ * @swagger
  * /public/tours/{tourId}:
  *   get:
  *     tags:
