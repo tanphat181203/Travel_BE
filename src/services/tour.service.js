@@ -1,4 +1,8 @@
 import { pool } from '../config/db.js';
+import {
+  formatObjectDates,
+  formatDateToLocal,
+} from '../utils/dateFormatter.js';
 
 class TourService {
   static async search(searchParams) {
@@ -23,6 +27,12 @@ class TourService {
         return { tours: [], totalItems };
       }
 
+      for (const tour of tours) {
+        if (tour.start_date) {
+          tour.start_date = formatDateToLocal(tour.start_date);
+        }
+      }
+
       const enrichedTours = await this.enrichToursWithAdditionalData(tours);
       return { tours: enrichedTours, totalItems };
     } catch (error) {
@@ -35,26 +45,51 @@ class TourService {
     const validDurationRanges = ['1-3 ngày', '3-5 ngày', '5-7 ngày', '7+ ngày'];
     const validPeopleRanges = ['1 người', '2 người', '3-5 người', '5+ người'];
 
-    if (
-      params.duration_range &&
-      !validDurationRanges.includes(params.duration_range)
-    ) {
-      throw new Error(
-        `Invalid duration range. Valid options are: ${validDurationRanges.join(
-          ', '
-        )}`
-      );
+    if (params.duration_range) {
+      console.log(`Validating duration_range: ${params.duration_range}`);
+      if (!validDurationRanges.includes(params.duration_range)) {
+        console.log(`Invalid duration_range: ${params.duration_range}`);
+        throw new Error(
+          `Invalid duration range. Valid options are: ${validDurationRanges.join(
+            ', '
+          )}`
+        );
+      }
     }
 
-    if (
-      params.people_range &&
-      !validPeopleRanges.includes(params.people_range)
-    ) {
-      throw new Error(
-        `Invalid people range. Valid options are: ${validPeopleRanges.join(
-          ', '
+    if (params.people_range) {
+      console.log(`Validating people_range: ${params.people_range}`);
+      console.log(`Valid people ranges: ${validPeopleRanges.join(', ')}`);
+      console.log(
+        `Includes check: ${validPeopleRanges.includes(params.people_range)}`
+      );
+
+      const decodedPeopleRange = decodeURIComponent(params.people_range);
+      console.log(`Decoded people_range: ${decodedPeopleRange}`);
+      console.log(
+        `Includes check with decoded: ${validPeopleRanges.includes(
+          decodedPeopleRange
         )}`
       );
+
+      if (
+        !validPeopleRanges.includes(params.people_range) &&
+        !validPeopleRanges.includes(decodedPeopleRange)
+      ) {
+        console.log(`Invalid people_range: ${params.people_range}`);
+        throw new Error(
+          `Invalid people range. Valid options are: ${validPeopleRanges.join(
+            ', '
+          )}`
+        );
+      }
+
+      if (
+        !validPeopleRanges.includes(params.people_range) &&
+        validPeopleRanges.includes(decodedPeopleRange)
+      ) {
+        params.people_range = decodedPeopleRange;
+      }
     }
   }
 
@@ -76,11 +111,11 @@ class TourService {
   static mapPeopleRange(rangeString) {
     switch (rangeString) {
       case '1 người':
-        return { min_people: 1, max_people: 1 };
+        return { min_people: 1, max_people: null };
       case '2 người':
-        return { min_people: 2, max_people: 2 };
+        return { min_people: 2, max_people: null };
       case '3-5 người':
-        return { min_people: 3, max_people: 5 };
+        return { min_people: 3, max_people: null };
       case '5+ người':
         return { min_people: 5, max_people: null };
       default:
@@ -123,10 +158,16 @@ class TourService {
     }
 
     if (params.people_range) {
+      console.log(`Processing people_range: ${params.people_range}`);
       const peopleRange = this.mapPeopleRange(params.people_range);
       if (peopleRange) {
+        console.log(
+          `Mapped to min_people: ${peopleRange.min_people}, max_people: ${peopleRange.max_people}`
+        );
         params.min_people = peopleRange.min_people;
         params.max_people = peopleRange.max_people;
+      } else {
+        console.log(`Failed to map people_range: ${params.people_range}`);
       }
       delete params.people_range;
     }
@@ -163,6 +204,11 @@ class TourService {
   }
 
   static buildSearchQuery(params) {
+    const values = [];
+    const conditions = [];
+    const paramMap = {};
+    let paramIndex = 1;
+
     let baseQuery = `
       WITH tour_search AS (
         SELECT
@@ -189,8 +235,10 @@ class TourService {
 
     if (params.departure_date) {
       baseQuery += `,
-          ABS(d.start_date - $departure_date::DATE) AS days_from_target
+          ABS(d.start_date - CAST($${paramIndex} AS DATE)) AS days_from_target
       `;
+      values.push(params.departure_date);
+      paramMap.departure_date = paramIndex++;
     }
 
     baseQuery += `
@@ -200,11 +248,6 @@ class TourService {
           Departure d ON t.tour_id = d.tour_id
         WHERE 1=1
     `;
-
-    const values = [];
-    const conditions = [];
-    const paramMap = {};
-    let paramIndex = 1;
 
     conditions.push(`t.availability = true`);
     conditions.push(`d.availability = true`);
@@ -259,26 +302,26 @@ class TourService {
       conditions.push(`t.max_participants >= $${paramIndex}`);
       values.push(params.min_people);
       paramMap.min_people = paramIndex++;
+      console.log(
+        `Added condition: t.max_participants >= ${params.min_people}`
+      );
     }
 
-    if (params.max_people !== undefined && !isNaN(params.max_people)) {
-      conditions.push(`t.max_participants <= $${paramIndex}`);
-      values.push(params.max_people);
-      paramMap.max_people = paramIndex++;
-    }
+    console.log(`Search conditions: ${conditions.join(' AND ')}`);
+    console.log(`Search values: ${values.join(', ')}`);
 
     if (params.departure_date) {
-      values.push(params.departure_date);
-      paramMap.departure_date = paramIndex++;
       if (params.nearby_days !== undefined) {
         values.push(params.nearby_days);
         paramMap.nearby_days = paramIndex++;
         conditions.push(`(
-          d.start_date = $${paramMap.departure_date}::DATE OR
-          ABS(d.start_date - $${paramMap.departure_date}::DATE) <= $${paramMap.nearby_days}
+          d.start_date = CAST($${paramMap.departure_date} AS DATE) OR
+          ABS(d.start_date - CAST($${paramMap.departure_date} AS DATE)) <= $${paramMap.nearby_days}
         )`);
       } else {
-        conditions.push(`d.start_date = $${paramMap.departure_date}::DATE`);
+        conditions.push(
+          `d.start_date = CAST($${paramMap.departure_date} AS DATE)`
+        );
       }
     } else {
       conditions.push(`d.start_date >= CURRENT_DATE`);
@@ -306,7 +349,7 @@ class TourService {
           tour_search ts
         ORDER BY
           ts.tour_id,
-          CASE WHEN ts.start_date = $${paramMap.departure_date}::DATE THEN 0 ELSE 1 END,
+          CASE WHEN ts.start_date = CAST($${paramMap.departure_date} AS DATE) THEN 0 ELSE 1 END,
           ts.days_from_target,
           ts.start_date
       `;
@@ -355,6 +398,13 @@ class TourService {
           tour.next_departure_date = nextDeparture.start_date;
         }
       }
+
+      if (tour.start_date) {
+        tour.start_date = formatDateToLocal(tour.start_date);
+      }
+      if (tour.next_departure_date) {
+        tour.next_departure_date = formatDateToLocal(tour.next_departure_date);
+      }
     }
 
     return tours;
@@ -371,7 +421,14 @@ class TourService {
     `;
 
     const result = await pool.query(query, [tourId]);
-    return result.rows.length > 0 ? result.rows[0] : null;
+    if (result.rows.length > 0) {
+      const departure = result.rows[0];
+      if (departure.start_date) {
+        departure.start_date = formatDateToLocal(departure.start_date);
+      }
+      return departure;
+    }
+    return null;
   }
 
   static getDurationRanges() {

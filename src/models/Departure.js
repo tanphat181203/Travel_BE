@@ -105,6 +105,23 @@ class Departure {
     return result.rows[0];
   }
 
+  static async checkDateExists(tourId, startDate, departureId = null) {
+    let query = `
+      SELECT COUNT(*) FROM Departure
+      WHERE tour_id = $1 AND start_date = $2
+    `;
+
+    const values = [tourId, startDate];
+
+    if (departureId) {
+      query += ` AND departure_id != $3`;
+      values.push(departureId);
+    }
+
+    const result = await pool.query(query, values);
+    return parseInt(result.rows[0].count) > 0;
+  }
+
   static async search(searchParams) {
     let baseQuery = 'SELECT * FROM Departure WHERE 1=1';
     let countQuery = 'SELECT COUNT(*) FROM Departure WHERE 1=1';
