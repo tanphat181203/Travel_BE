@@ -11,6 +11,10 @@ const regionMap = {
 };
 
 const generateTourText = (tour) => {
+  if (tour.query) {
+    return tour.query;
+  }
+
   const regionName = regionMap[tour.region] || 'không xác định';
 
   const destinationList = tour.destination.join(', ');
@@ -43,6 +47,18 @@ const formatEmbeddingForPgVector = (embeddingData) => {
 
 export const generateEmbedding = async (tourData) => {
   try {
+    if (!tourData) {
+      console.error('No data provided for embedding generation');
+      return null;
+    }
+
+    const text = generateTourText(tourData);
+
+    if (!process.env.AI_SERVER_URL || !process.env.AI_SERVER_KEY) {
+      console.error('AI server configuration missing');
+      return null;
+    }
+
     const response = await fetch(`${process.env.AI_SERVER_URL}/embed`, {
       method: 'POST',
       headers: {
@@ -50,14 +66,25 @@ export const generateEmbedding = async (tourData) => {
         Authorization: `Bearer ${process.env.AI_SERVER_KEY}`,
       },
       body: JSON.stringify({
-        text: generateTourText(tourData),
+        text: text,
       }),
     });
 
+    if (!response.ok) {
+      console.error(`AI server responded with status: ${response.status}`);
+      return null;
+    }
+
     const data = await response.json();
+
+    if (!data.embeddings) {
+      console.error('No embeddings returned from AI server');
+      return null;
+    }
+
     return formatEmbeddingForPgVector(data.embeddings);
   } catch (error) {
     console.error('Error generating embedding:', error);
-    throw error;
+    return null;
   }
 };

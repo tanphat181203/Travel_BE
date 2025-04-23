@@ -250,6 +250,60 @@ router.get(
  *         schema:
  *           type: boolean
  *         description: Filter by availability status
+ *       - in: query
+ *         name: min_price
+ *         schema:
+ *           type: number
+ *         description: Minimum price for tour (based on adult price)
+ *       - in: query
+ *         name: max_price
+ *         schema:
+ *           type: number
+ *         description: Maximum price for tour (based on adult price)
+ *       - in: query
+ *         name: duration_range
+ *         schema:
+ *           type: string
+ *           enum: ['1-3 ngày', '3-5 ngày', '5-7 ngày', '7+ ngày']
+ *         description: Predefined duration range
+ *       - in: query
+ *         name: min_duration
+ *         schema:
+ *           type: integer
+ *         description: Minimum duration in days
+ *       - in: query
+ *         name: max_duration
+ *         schema:
+ *           type: integer
+ *         description: Maximum duration in days
+ *       - in: query
+ *         name: people_range
+ *         schema:
+ *           type: string
+ *           enum: ['1 người', '2 người', '3-5 người', '5+ người']
+ *         description: Predefined people range
+ *       - in: query
+ *         name: min_people
+ *         schema:
+ *           type: integer
+ *         description: Minimum number of people
+ *       - in: query
+ *         name: max_people
+ *         schema:
+ *           type: integer
+ *         description: Maximum number of people
+ *       - in: query
+ *         name: departure_date
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Exact departure date (YYYY-MM-DD)
+ *       - in: query
+ *         name: nearby_days
+ *         schema:
+ *           type: integer
+ *           default: 3
+ *         description: Number of days to search around exact date
  *     responses:
  *       200:
  *         description: List of matching tours for the seller
@@ -322,6 +376,47 @@ router.get(
   requireSeller,
   requestLogger,
   tourController.searchTours
+);
+
+/**
+ * @swagger
+ * /seller/tours/search-ranges:
+ *   get:
+ *     tags:
+ *       - Seller - Tour Management
+ *     summary: Get predefined search ranges
+ *     description: Get predefined ranges for duration and number of people
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Predefined search ranges
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 duration_ranges:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   example: ['1-3 ngày', '3-5 ngày', '5-7 ngày', '7+ ngày']
+ *                 people_ranges:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   example: ['1 người', '2 người', '3-5 người', '5+ người']
+ *       401:
+ *         description: Unauthorized - not logged in
+ *       500:
+ *         description: Server error
+ */
+router.get(
+  '/search-ranges',
+  authenticateJWT,
+  requireSeller,
+  requestLogger,
+  tourController.getSearchRanges
 );
 
 /**

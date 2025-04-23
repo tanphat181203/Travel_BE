@@ -1,4 +1,5 @@
 import Tour from '../../models/Tour.js';
+import TourService from '../../services/tour.service.js';
 import { generateEmbedding } from '../../utils/embeddingHelper.js';
 import { uploadToFirebase } from '../../utils/uploadHandler.js';
 import { checkTourOwnership } from '../../utils/tourHelper.js';
@@ -184,6 +185,18 @@ export const searchTours = async (req, res, next) => {
       tours: sanitizedTours,
       pagination,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getSearchRanges = async (req, res, next) => {
+  try {
+    const ranges = {
+      duration_ranges: TourService.getDurationRanges(),
+      people_ranges: TourService.getPeopleRanges(),
+    };
+    res.status(200).json(ranges);
   } catch (error) {
     next(error);
   }

@@ -42,12 +42,56 @@ const router = express.Router();
  *         name: duration
  *         schema:
  *           type: string
- *         description: Duration (e.g., "4", "4 ngày 3 đêm")
+ *         description: Duration (e.g., "4", "4 ngày 3 đêm") - Legacy parameter, consider using duration_range instead
+ *       - in: query
+ *         name: duration_range
+ *         schema:
+ *           type: string
+ *           enum: ['1-3 ngày', '3-5 ngày', '5-7 ngày', '7+ ngày']
+ *         description: Predefined duration range
+ *       - in: query
+ *         name: min_duration
+ *         schema:
+ *           type: integer
+ *         description: Minimum duration in days
+ *       - in: query
+ *         name: max_duration
+ *         schema:
+ *           type: integer
+ *         description: Maximum duration in days
  *       - in: query
  *         name: num_people
  *         schema:
  *           type: integer
- *         description: Minimum number of people the tour should accommodate
+ *         description: Minimum number of people the tour should accommodate - Legacy parameter, consider using people_range instead
+ *       - in: query
+ *         name: people_range
+ *         schema:
+ *           type: string
+ *           enum: ['1 người', '2 người', '3-5 người', '5+ người']
+ *         description: Predefined people range
+ *       - in: query
+ *         name: min_people
+ *         schema:
+ *           type: integer
+ *         description: Minimum number of people
+ *       - in: query
+ *         name: max_people
+ *         schema:
+ *           type: integer
+ *         description: Maximum number of people
+ *       - in: query
+ *         name: departure_date
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Exact departure date (YYYY-MM-DD)
+ *       - in: query
+ *         name: nearby_days
+ *         schema:
+ *           type: integer
+ *           default: 3
+ *         description: Number of days to search around exact date
  *     responses:
  *       200:
  *         description: Search results
@@ -222,6 +266,37 @@ router.get(
  *         description: Server error
  */
 router.get('/locations', requestLogger, tourController.getLocations);
+
+/**
+ * @swagger
+ * /public/tours/search-ranges:
+ *   get:
+ *     tags:
+ *       - Public Tours
+ *     summary: Get predefined search ranges
+ *     description: Get predefined ranges for duration and number of people
+ *     responses:
+ *       200:
+ *         description: Predefined search ranges
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 duration_ranges:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   example: ['1-3 ngày', '3-5 ngày', '5-7 ngày', '7+ ngày']
+ *                 people_ranges:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   example: ['1 người', '2 người', '3-5 người', '5+ người']
+ *       500:
+ *         description: Server error
+ */
+router.get('/search-ranges', requestLogger, tourController.getSearchRanges);
 
 /**
  * @swagger

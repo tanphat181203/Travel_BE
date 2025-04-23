@@ -1,4 +1,5 @@
 import Tour from '../../models/Tour.js';
+import TourService from '../../services/tour.service.js';
 import {
   getPaginationParams,
   createPaginationMetadata,
@@ -101,6 +102,18 @@ export const getLocations = async (req, res, next) => {
   try {
     const locations = await Tour.getLocations();
     res.status(200).json(locations);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getSearchRanges = async (req, res, next) => {
+  try {
+    const ranges = {
+      duration_ranges: TourService.getDurationRanges(),
+      people_ranges: TourService.getPeopleRanges(),
+    };
+    res.status(200).json(ranges);
   } catch (error) {
     next(error);
   }
