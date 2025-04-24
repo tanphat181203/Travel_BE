@@ -58,6 +58,22 @@ class Departure {
     return { departures: result.rows, totalItems };
   }
 
+  static async findAvailableByTourId(tourId, limit, offset) {
+    const countQuery = 'SELECT COUNT(*) FROM Departure WHERE tour_id = $1 AND availability = true';
+    const countResult = await pool.query(countQuery, [tourId]);
+    const totalItems = parseInt(countResult.rows[0].count);
+
+    let query =
+      'SELECT * FROM Departure WHERE tour_id = $1 AND availability = true ORDER BY start_date ASC';
+
+    if (limit !== undefined && offset !== undefined) {
+      query = addPaginationToQuery(query, limit, offset);
+    }
+
+    const result = await pool.query(query, [tourId]);
+    return { departures: result.rows, totalItems };
+  }
+
   static async update(departureId, updateData) {
     const allowedFields = [
       'start_date',

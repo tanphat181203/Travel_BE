@@ -116,15 +116,6 @@ class Tour {
 
     tour.images = imagesResult.rows;
 
-    if (tour.availability) {
-      const nextDeparture = await this.getNextAvailableDeparture(tour.tour_id);
-      if (nextDeparture) {
-        tour.next_departure_adult_price = nextDeparture.price_adult;
-        tour.next_departure_id = nextDeparture.departure_id;
-        tour.next_departure_date = nextDeparture.start_date;
-      }
-    }
-
     return tour;
   }
 

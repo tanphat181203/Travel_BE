@@ -1,9 +1,11 @@
 import Tour from '../../models/Tour.js';
+import Departure from '../../models/Departure.js';
 import TourService from '../../services/tour.service.js';
 import {
   getPaginationParams,
   createPaginationMetadata,
 } from '../../utils/pagination.js';
+import { formatDateToLocal } from '../../utils/dateFormatter.js';
 
 export const getTourById = async (req, res, next) => {
   try {
@@ -16,6 +18,15 @@ export const getTourById = async (req, res, next) => {
     }
 
     delete tour.embedding;
+
+    const { departures } = await Departure.findAvailableByTourId(tourId);
+
+    const formattedDepartures = departures.map((departure) => ({
+      ...departure,
+      start_date: formatDateToLocal(departure.start_date),
+    }));
+
+    tour.departures = formattedDepartures;
 
     return res.status(200).json(tour);
   } catch (error) {
