@@ -26,9 +26,15 @@ const vnpay = new VNPay({
   loggerFn: ignoreLogger,
 });
 
-export const generatePaymentUrl = (amount, bookingId, orderInfo, ipAddr) => {
+export const generatePaymentUrl = (
+  amount,
+  orderId,
+  orderInfo,
+  ipAddr,
+  returnUrl
+) => {
   try {
-    const txnRef = `${bookingId}-${Date.now()}`;
+    const txnRef = `${orderId}-${Date.now()}`;
 
     // const tomorrow = new Date();
     // tomorrow.setDate(tomorrow.getDate() + 1);
@@ -37,16 +43,17 @@ export const generatePaymentUrl = (amount, bookingId, orderInfo, ipAddr) => {
       vnp_Amount: amount,
       vnp_IpAddr: ipAddr || '127.0.0.1',
       vnp_TxnRef: txnRef, // Unique transaction reference
-      vnp_OrderInfo: orderInfo || `Payment for booking #${bookingId}`,
+      vnp_OrderInfo: orderInfo || `Payment for order #${orderId}`,
       vnp_OrderType: ProductCode.Other,
-      vnp_ReturnUrl: `${process.env.SERVER_URL}/api/user/payments/vnpay-return`,
+      vnp_ReturnUrl:
+        returnUrl || `${process.env.SERVER_URL}/api/user/payments/vnpay-return`,
       vnp_Locale: VnpLocale.VN,
       // vnp_CreateDate: dateFormat(new Date()),
       // vnp_ExpireDate: dateFormat(tomorrow),
     });
 
     logger.info(
-      `Generated VNPay payment URL for booking: ${bookingId}, txnRef: ${txnRef}`
+      `Generated VNPay payment URL for order: ${orderId}, txnRef: ${txnRef}`
     );
     return { paymentUrl, txnRef };
   } catch (error) {
@@ -145,13 +152,26 @@ export const constructStripeEvent = (payload, signature) => {
 
 export const createStripeCheckoutSession = async (
   amount,
-  bookingId,
+  orderId,
   orderInfo,
   successUrl,
-  cancelUrl
+  cancelUrl,
+  isSubscription = false
 ) => {
   try {
     const amountInVND = Math.round(amount);
+
+    const metadata = isSubscription
+      ? { subscription_id: orderId }
+      : { booking_id: orderId };
+
+    const defaultSuccessUrl = isSubscription
+      ? `${process.env.CLIENT_URL}/seller/subscription/success?payment_method=stripe&subscription_id=${orderId}`
+      : `${process.env.CLIENT_URL}/payment/success?payment_method=stripe&booking_id=${orderId}`;
+
+    const defaultCancelUrl = isSubscription
+      ? `${process.env.CLIENT_URL}/seller/subscription/failed?payment_method=stripe&reason=cancelled&subscription_id=${orderId}`
+      : `${process.env.CLIENT_URL}/payment/failed?payment_method=stripe&reason=cancelled&booking_id=${orderId}`;
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -160,8 +180,8 @@ export const createStripeCheckoutSession = async (
           price_data: {
             currency: 'vnd',
             product_data: {
-              name: orderInfo || `Booking #${bookingId}`,
-              description: `Payment for booking #${bookingId}`,
+              name: orderInfo || `Order #${orderId}`,
+              description: orderInfo || `Payment for order #${orderId}`,
             },
             unit_amount: amountInVND,
           },
@@ -169,19 +189,13 @@ export const createStripeCheckoutSession = async (
         },
       ],
       mode: 'payment',
-      success_url:
-        successUrl ||
-        `${process.env.CLIENT_URL}/payment/success?payment_method=stripe&booking_id=${bookingId}`,
-      cancel_url:
-        cancelUrl ||
-        `${process.env.CLIENT_URL}/payment/failed?payment_method=stripe&reason=cancelled&booking_id=${bookingId}`,
-      metadata: {
-        booking_id: bookingId,
-      },
+      success_url: successUrl || defaultSuccessUrl,
+      cancel_url: cancelUrl || defaultCancelUrl,
+      metadata,
     });
 
     logger.info(
-      `Created Stripe checkout session for booking: ${bookingId}, session id: ${session.id}`
+      `Created Stripe checkout session for order: ${orderId}, session id: ${session.id}`
     );
     return session;
   } catch (error) {

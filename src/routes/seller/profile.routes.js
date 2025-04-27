@@ -1,6 +1,10 @@
 import express from 'express';
 import * as profileController from '../../controllers/seller/profile.controller.js';
-import { authenticateJWT, requireSeller } from '../../middlewares/auth.js';
+import {
+  authenticateJWT,
+  requireSeller,
+  checkSellerSubscription,
+} from '../../middlewares/auth.js';
 import { upload } from '../../utils/uploadHandler.js';
 import requestLogger from './../../middlewares/requestLogger.js';
 
@@ -54,6 +58,7 @@ router.get(
   '/',
   authenticateJWT,
   requireSeller,
+  checkSellerSubscription,
   requestLogger,
   profileController.getSellerProfile
 );

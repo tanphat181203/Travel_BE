@@ -1,6 +1,7 @@
 import { pool } from '../config/db.js';
 import { CronJob } from 'cron';
 import logger from './logger.js';
+import SellerSubscription from '../models/SellerSubscription.js';
 
 export const updateOverdueDepartures = async () => {
   const client = await pool.connect();
@@ -141,6 +142,59 @@ export const updateToursWithoutDepartures = async () => {
   }
 };
 
+export const updateExpiredSubscriptions = async () => {
+  try {
+    logger.info('Starting job: Update expired subscriptions');
+
+    const expiredSubscriptions =
+      await SellerSubscription.findExpiredSubscriptions();
+
+    if (expiredSubscriptions.length === 0) {
+      logger.info('No expired subscriptions found');
+      return {
+        success: true,
+        count: 0,
+        updatedSubscriptions: [],
+      };
+    }
+
+    const updatedSubscriptions = [];
+
+    for (const subscription of expiredSubscriptions) {
+      await SellerSubscription.updateStatus(
+        subscription.subscription_id,
+        'expired'
+      );
+
+      updatedSubscriptions.push({
+        subscription_id: subscription.subscription_id,
+        seller_id: subscription.seller_id,
+        seller_email: subscription.seller_email,
+        seller_name: subscription.seller_name,
+        expiry_date: subscription.expiry_date,
+      });
+    }
+
+    logger.info(
+      `Successfully updated ${updatedSubscriptions.length} expired subscriptions`
+    );
+    logger.debug('Updated subscriptions:', updatedSubscriptions);
+
+    return {
+      success: true,
+      count: updatedSubscriptions.length,
+      updatedSubscriptions,
+    };
+  } catch (error) {
+    logger.error('Error updating expired subscriptions:', error);
+
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
+};
+
 export const initCronJobs = () => {
   const overdueJob = new CronJob(
     '1 0 * * *', // Run at 00:01 every day
@@ -162,13 +216,25 @@ export const initCronJobs = () => {
     false // runOnInit (don't run immediately on initialization)
   );
 
+  const expiredSubscriptionsJob = new CronJob(
+    '0 1 * * *', // Run at 01:00 every day
+    updateExpiredSubscriptions,
+    null, // onComplete
+    false, // start
+    null, // timezone (null = server timezone)
+    null, // context
+    false // runOnInit (don't run immediately on initialization)
+  );
+
   overdueJob.start();
   toursWithoutDeparturesJob.start();
+  expiredSubscriptionsJob.start();
 
   logger.info('Cron jobs initialized successfully');
 
   return {
     overdueJob,
     toursWithoutDeparturesJob,
+    expiredSubscriptionsJob,
   };
 };

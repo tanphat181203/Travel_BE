@@ -454,6 +454,108 @@ class Booking {
       throw error;
     }
   }
+
+  static async getStatsBySellerId(sellerId) {
+    try {
+      const client = await pool.connect();
+
+      try {
+        // Get booking counts by status
+        const bookingStatsQuery = `
+          SELECT
+            COUNT(*) as total_bookings,
+            COUNT(*) FILTER (WHERE b.booking_status = 'pending') as pending_bookings,
+            COUNT(*) FILTER (WHERE b.booking_status = 'confirmed') as confirmed_bookings,
+            COUNT(*) FILTER (WHERE b.booking_status = 'cancelled') as cancelled_bookings,
+            SUM(b.total_price) FILTER (WHERE b.booking_status = 'confirmed') as total_revenue
+          FROM Booking b
+          JOIN Departure d ON b.departure_id = d.departure_id
+          JOIN Tour t ON d.tour_id = t.tour_id
+          WHERE t.seller_id = $1
+        `;
+        const bookingStatsResult = await client.query(bookingStatsQuery, [
+          sellerId,
+        ]);
+
+        // Get recent booking stats
+        const recentStatsQuery = `
+          SELECT
+            COUNT(*) as recent_bookings,
+            SUM(b.total_price) as recent_revenue
+          FROM Booking b
+          JOIN Departure d ON b.departure_id = d.departure_id
+          JOIN Tour t ON d.tour_id = t.tour_id
+          WHERE t.seller_id = $1
+          AND b.booking_date >= NOW() - INTERVAL '30 days'
+        `;
+        const recentStatsResult = await client.query(recentStatsQuery, [
+          sellerId,
+        ]);
+
+        return {
+          total_bookings:
+            parseInt(bookingStatsResult.rows[0].total_bookings) || 0,
+          pending_bookings:
+            parseInt(bookingStatsResult.rows[0].pending_bookings) || 0,
+          confirmed_bookings:
+            parseInt(bookingStatsResult.rows[0].confirmed_bookings) || 0,
+          cancelled_bookings:
+            parseInt(bookingStatsResult.rows[0].cancelled_bookings) || 0,
+          total_revenue:
+            parseFloat(bookingStatsResult.rows[0].total_revenue) || 0,
+          recent_bookings:
+            parseInt(recentStatsResult.rows[0].recent_bookings) || 0,
+          recent_revenue:
+            parseFloat(recentStatsResult.rows[0].recent_revenue) || 0,
+        };
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      logger.error(
+        `Error getting booking stats for seller ${sellerId}:`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  static async getRecentBySellerId(sellerId, limit = 5) {
+    try {
+      const query = `
+        SELECT
+          b.booking_id,
+          b.total_price,
+          b.booking_status,
+          b.booking_date,
+          d.start_date,
+          t.title as tour_title,
+          u.name as user_name,
+          u.email as user_email,
+          c.payment_status
+        FROM Booking b
+        JOIN Departure d ON b.departure_id = d.departure_id
+        JOIN Tour t ON d.tour_id = t.tour_id
+        JOIN Users u ON b.user_id = u.id
+        LEFT JOIN Checkout c ON b.booking_id = c.booking_id AND
+                              (c.payment_status = 'pending' OR
+                               c.payment_status = 'awaiting_seller_confirmation' OR
+                               c.payment_status = 'completed')
+        WHERE t.seller_id = $1
+        ORDER BY b.booking_date DESC
+        LIMIT $2
+      `;
+
+      const result = await pool.query(query, [sellerId, limit]);
+      return result.rows;
+    } catch (error) {
+      logger.error(
+        `Error getting recent bookings for seller ${sellerId}:`,
+        error
+      );
+      throw error;
+    }
+  }
 }
 
 export default Booking;

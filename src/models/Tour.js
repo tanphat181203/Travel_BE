@@ -409,6 +409,70 @@ class Tour {
       destinations: [...new Set(result.rows.map((row) => row.destination))],
     };
   }
+
+  static async getStatsBySellerId(sellerId) {
+    try {
+      const client = await pool.connect();
+
+      try {
+        // Get total tours count
+        const toursQuery = `
+          SELECT
+            COUNT(*) as total_tours,
+            COUNT(*) FILTER (WHERE availability = true) as active_tours
+          FROM Tour
+          WHERE seller_id = $1
+        `;
+        const toursResult = await client.query(toursQuery, [sellerId]);
+
+        // Get total departures count
+        const departuresQuery = `
+          SELECT
+            COUNT(*) as total_departures,
+            COUNT(*) FILTER (WHERE d.availability = true AND d.start_date >= CURRENT_DATE) as upcoming_departures
+          FROM Departure d
+          JOIN Tour t ON d.tour_id = t.tour_id
+          WHERE t.seller_id = $1
+        `;
+        const departuresResult = await client.query(departuresQuery, [
+          sellerId,
+        ]);
+
+        // Get most popular tour
+        const popularTourQuery = `
+          SELECT
+            t.tour_id,
+            t.title,
+            COUNT(b.booking_id) as booking_count
+          FROM Tour t
+          JOIN Departure d ON t.tour_id = d.tour_id
+          JOIN Booking b ON d.departure_id = b.departure_id
+          WHERE t.seller_id = $1
+          GROUP BY t.tour_id, t.title
+          ORDER BY booking_count DESC
+          LIMIT 1
+        `;
+        const popularTourResult = await client.query(popularTourQuery, [
+          sellerId,
+        ]);
+
+        return {
+          total_tours: parseInt(toursResult.rows[0].total_tours) || 0,
+          active_tours: parseInt(toursResult.rows[0].active_tours) || 0,
+          total_departures:
+            parseInt(departuresResult.rows[0].total_departures) || 0,
+          upcoming_departures:
+            parseInt(departuresResult.rows[0].upcoming_departures) || 0,
+          most_popular_tour: popularTourResult.rows[0] || null,
+        };
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error(`Error getting tour stats for seller ${sellerId}:`, error);
+      throw error;
+    }
+  }
 }
 
 export default Tour;

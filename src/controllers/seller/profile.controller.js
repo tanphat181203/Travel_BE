@@ -15,7 +15,16 @@ export const getSellerProfile = async (req, res, next) => {
       phone_number: seller.phone_number,
       address: seller.address,
       status: seller.status,
+      hasActiveSubscription: req.hasActiveSubscription || false,
     };
+
+    if (req.subscription) {
+      sanitizedSeller.subscription = {
+        package_name: req.subscription.package_name,
+        expiry_date: req.subscription.expiry_date,
+        status: req.subscription.status,
+      };
+    }
 
     res.json(sanitizedSeller);
   } catch (error) {

@@ -61,8 +61,7 @@ CREATE TABLE IF NOT EXISTS SellerSubscription (
     purchase_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     expiry_date TIMESTAMPTZ NOT NULL,
     status VARCHAR(50),
-    payment_method VARCHAR(50) NOT NULL,
-    transaction_id VARCHAR(255)
+    payment_method VARCHAR(50) NOT NULL
 );
 
 -- 6. History
@@ -155,6 +154,16 @@ CREATE TABLE IF NOT EXISTS Tour_Promotion (
     PRIMARY KEY (tour_id, promotion_id)
 );
 
+-- 15. SubscriptionInvoice
+CREATE TABLE IF NOT EXISTS SubscriptionInvoice (
+    invoice_id SERIAL PRIMARY KEY,
+    subscription_id INTEGER NOT NULL REFERENCES SellerSubscription(subscription_id),
+    amount_due DECIMAL(10,2) NOT NULL,
+    date_issued TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    details JSONB,
+    transaction_id VARCHAR(255)
+);
+
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON Users(email);
 CREATE INDEX IF NOT EXISTS idx_users_role ON Users(role);
 CREATE INDEX IF NOT EXISTS idx_users_status ON Users(status);
@@ -210,3 +219,8 @@ CREATE INDEX IF NOT EXISTS idx_promotion_end_date ON Promotion(end_date);
 
 CREATE INDEX IF NOT EXISTS idx_tour_promotion_tour_id ON Tour_Promotion(tour_id);
 CREATE INDEX IF NOT EXISTS idx_tour_promotion_promotion_id ON Tour_Promotion(promotion_id);
+
+CREATE INDEX IF NOT EXISTS idx_subscriptioninvoice_subscription_id ON SubscriptionInvoice(subscription_id);
+CREATE INDEX IF NOT EXISTS idx_subscriptioninvoice_date_issued ON SubscriptionInvoice(date_issued);
+
+CREATE INDEX IF NOT EXISTS idx_tour_departure_location ON Tour(departure_location)

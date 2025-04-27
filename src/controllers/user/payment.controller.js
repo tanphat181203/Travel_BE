@@ -4,6 +4,8 @@ dotenv.config();
 import Booking from '../../models/Booking.js';
 import Checkout from '../../models/Checkout.js';
 import Invoice from '../../models/Invoice.js';
+import SellerSubscription from '../../models/SellerSubscription.js';
+import SubscriptionInvoice from '../../models/SubscriptionInvoice.js';
 import {
   generatePaymentUrl,
   verifyReturnUrl,
@@ -325,59 +327,99 @@ export const stripeWebhook = async (req, res) => {
     // Handle the event based on its type
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;
-      const bookingId = session.metadata.booking_id;
 
-      logger.info(
-        `Stripe checkout session completed for booking ${bookingId}, session id: ${session.id}`
-      );
+      // Check if this is a subscription payment
+      if (session.metadata.subscription_id) {
+        const subscriptionId = session.metadata.subscription_id;
 
-      // Find the checkout by transaction ID (session ID)
-      const checkout = await Checkout.findByTransactionId(session.id);
-      if (!checkout) {
-        logger.error(`Checkout not found for session id: ${session.id}`);
-        return res.status(400).json({ error: 'Checkout not found' });
+        logger.info(
+          `Stripe checkout session completed for subscription ${subscriptionId}, session id: ${session.id}`
+        );
+
+        // Find the subscription invoice by transaction ID
+        const invoice = await SubscriptionInvoice.findByTransactionId(
+          session.id
+        );
+        if (!invoice) {
+          logger.error(
+            `Subscription invoice not found for session id: ${session.id}`
+          );
+          return res
+            .status(400)
+            .json({ error: 'Subscription invoice not found' });
+        }
+
+        // Update subscription status
+        await SellerSubscription.updateStatus(
+          invoice.subscription_id,
+          'active',
+          session.id
+        );
+
+        logger.info(
+          `Webhook confirmed Stripe payment for subscription ${invoice.subscription_id}`
+        );
       }
+      // Handle booking payment
+      else if (session.metadata.booking_id) {
+        const bookingId = session.metadata.booking_id;
 
-      // Update checkout status
-      await Checkout.updateStatus(
-        checkout.checkout_id,
-        'completed',
-        session.id
-      );
+        logger.info(
+          `Stripe checkout session completed for booking ${bookingId}, session id: ${session.id}`
+        );
 
-      // Update booking status
-      await Booking.updateStatus(checkout.booking_id, 'confirmed');
+        // Find the checkout by transaction ID (session ID)
+        const checkout = await Checkout.findByTransactionId(session.id);
+        if (!checkout) {
+          logger.error(`Checkout not found for session id: ${session.id}`);
+          return res.status(400).json({ error: 'Checkout not found' });
+        }
 
-      // Get booking details
-      const booking = await Booking.findById(checkout.booking_id);
+        // Update checkout status
+        await Checkout.updateStatus(
+          checkout.checkout_id,
+          'completed',
+          session.id
+        );
 
-      // Create invoice if it doesn't exist
-      const existingInvoice = await Invoice.findByBookingId(
-        checkout.booking_id
-      );
+        // Update booking status
+        await Booking.updateStatus(checkout.booking_id, 'confirmed');
 
-      if (!existingInvoice) {
-        const invoiceData = {
-          booking_id: checkout.booking_id,
-          amount_due: checkout.amount,
-          details: JSON.stringify({
-            payment_method: 'stripe',
-            transaction_id: session.id,
-            payment_date: new Date().toISOString(),
-            tour_title: booking.tour_title,
-            departure_date: booking.start_date,
-            num_adults: booking.num_adults,
-            num_children_120_140: booking.num_children_120_140,
-            num_children_100_120: booking.num_children_100_120,
-          }),
-        };
+        // Get booking details
+        const booking = await Booking.findById(checkout.booking_id);
 
-        await Invoice.create(invoiceData);
+        // Create invoice if it doesn't exist
+        const existingInvoice = await Invoice.findByBookingId(
+          checkout.booking_id
+        );
+
+        if (!existingInvoice) {
+          const invoiceData = {
+            booking_id: checkout.booking_id,
+            amount_due: checkout.amount,
+            details: JSON.stringify({
+              payment_method: 'stripe',
+              transaction_id: session.id,
+              payment_date: new Date().toISOString(),
+              tour_title: booking.tour_title,
+              departure_date: booking.start_date,
+              num_adults: booking.num_adults,
+              num_children_120_140: booking.num_children_120_140,
+              num_children_100_120: booking.num_children_100_120,
+            }),
+          };
+
+          await Invoice.create(invoiceData);
+        }
+
+        logger.info(
+          `Webhook confirmed Stripe payment for booking ${checkout.booking_id}`
+        );
+      } else {
+        logger.warn(
+          `Stripe checkout session completed but no booking_id or subscription_id found in metadata: ${session.id}`
+        );
       }
-
-      logger.info(
-        `Webhook confirmed Stripe payment for booking ${checkout.booking_id}`
-      );
     }
     // Also handle payment_intent events for backward compatibility
     else if (event.type === 'payment_intent.succeeded') {
@@ -438,18 +480,45 @@ export const stripeWebhook = async (req, res) => {
     ) {
       // Handle both payment intent failures and session expirations
       const object = event.data.object;
-      const bookingId = object.metadata.booking_id;
       const objectId = object.id;
 
-      logger.warn(
-        `Stripe payment failed for booking ${bookingId}, id: ${objectId}`
-      );
+      // Check if this is a subscription payment
+      if (object.metadata.subscription_id) {
+        const subscriptionId = object.metadata.subscription_id;
 
-      // Find the checkout by transaction ID
-      const checkout = await Checkout.findByTransactionId(objectId);
-      if (checkout) {
-        // Update checkout status to failed
-        await Checkout.updateStatus(checkout.checkout_id, 'failed', objectId);
+        logger.warn(
+          `Stripe payment failed for subscription ${subscriptionId}, id: ${objectId}`
+        );
+
+        // Find the subscription by transaction ID
+        const invoice = await SubscriptionInvoice.findByTransactionId(objectId);
+        if (invoice) {
+          // Update subscription status to failed
+          await SellerSubscription.updateStatus(
+            invoice.subscription_id,
+            'failed',
+            objectId
+          );
+        }
+      }
+      // Handle booking payment failure
+      else if (object.metadata.booking_id) {
+        const bookingId = object.metadata.booking_id;
+
+        logger.warn(
+          `Stripe payment failed for booking ${bookingId}, id: ${objectId}`
+        );
+
+        // Find the checkout by transaction ID
+        const checkout = await Checkout.findByTransactionId(objectId);
+        if (checkout) {
+          // Update checkout status to failed
+          await Checkout.updateStatus(checkout.checkout_id, 'failed', objectId);
+        }
+      } else {
+        logger.warn(
+          `Stripe payment failed but no booking_id or subscription_id found in metadata: ${objectId}`
+        );
       }
     }
 
