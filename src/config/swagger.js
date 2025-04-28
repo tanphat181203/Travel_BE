@@ -38,10 +38,11 @@ const options = {
     servers: [
       {
         url: '/api',
-        description: 'API server',
+        description: 'API Server',
       },
     ],
     tags: [
+      // Public API endpoints
       {
         name: 'Public Tours',
         description: 'Public endpoints for browsing and searching tours',
@@ -50,6 +51,12 @@ const options = {
         name: 'Public Departures',
         description: 'Public endpoints for viewing available tour departures',
       },
+      {
+        name: 'Public - Reviews',
+        description: 'Public endpoints for viewing tour reviews',
+      },
+
+      // Authentication endpoints
       {
         name: 'User Authentication',
         description:
@@ -64,13 +71,11 @@ const options = {
         name: 'Admin Authentication',
         description: 'Endpoints for admin login and authentication',
       },
+
+      // User endpoints
       {
         name: 'User Profile',
         description: 'Endpoints for managing user profile information',
-      },
-      {
-        name: 'Seller Profile',
-        description: 'Endpoints for managing seller profile information',
       },
       {
         name: 'User - Booking Management',
@@ -85,6 +90,22 @@ const options = {
         description: 'Endpoints for users to view and manage their invoices',
       },
       {
+        name: 'User - Review Management',
+        description:
+          'Endpoints for users to create and manage their tour reviews',
+      },
+
+      // Seller endpoints
+      {
+        name: 'Seller Profile',
+        description: 'Endpoints for managing seller profile information',
+      },
+      {
+        name: 'Seller - Dashboard',
+        description:
+          'Endpoints for sellers to view dashboard statistics and metrics',
+      },
+      {
         name: 'Seller - Tour Management',
         description: 'Endpoints for sellers to create and manage their tours',
       },
@@ -94,12 +115,36 @@ const options = {
           'Endpoints for sellers to manage tour departures and schedules',
       },
       {
+        name: 'Seller - Booking Management',
+        description: 'Endpoints for sellers to manage bookings for their tours',
+      },
+      {
+        name: 'Seller - Invoice Management',
+        description: 'Endpoints for sellers to manage invoices for their tours',
+      },
+      {
+        name: 'Seller - Review Management',
+        description:
+          'Endpoints for sellers to view and manage reviews for their tours',
+      },
+      {
+        name: 'Seller - Subscription Management',
+        description:
+          'Endpoints for sellers to manage their subscription packages',
+      },
+
+      // Admin endpoints
+      {
         name: 'Admin - User Management',
         description: 'Endpoints for admins to manage user accounts',
       },
       {
         name: 'Admin - Seller Management',
         description: 'Endpoints for admins to manage seller accounts',
+      },
+      {
+        name: 'Admin - Subscription Management',
+        description: 'Endpoints for admins to manage subscription packages',
       },
       {
         name: 'Admin - System Management',
@@ -124,30 +169,111 @@ const specs = swaggerJsdoc(options);
 export const setupSwagger = (app) => {
   const swaggerOptions = {
     customCss: `
-      .swagger-ui .topbar { display: none }
-      .swagger-ui .information-container { padding: 20px 0 }
-      .swagger-ui .scheme-container { padding: 15px 0 }
-      .swagger-ui .opblock-tag { font-size: 18px; margin: 10px 0 5px 0; padding: 10px; border-radius: 4px; }
-      .swagger-ui .opblock-tag:hover { background-color: rgba(0,0,0,.05) }
-      .swagger-ui section.models { display: none }
+      :root {
+        /* Layout & spacing */
+        --topbar-display: none;
+        --info-padding: 20px 0;
+        --scheme-padding: 15px 0;
+        --tag-radius: 4px;
+        --tag-font-size: 18px;
 
-      /* Tag group styling */
-      .swagger-ui .opblock-tag[data-tag^="Public"] { background-color: #e8f4f8; border-left: 4px solid #61affe; }
-      .swagger-ui .opblock-tag[data-tag^="User Auth"],
-      .swagger-ui .opblock-tag[data-tag^="Seller Auth"],
-      .swagger-ui .opblock-tag[data-tag^="Admin Auth"] { background-color: #e8f8f5; border-left: 4px solid #49cc90; }
-      .swagger-ui .opblock-tag[data-tag^="User Pro"] { background-color: #f9f1e8; border-left: 4px solid #f5a623; }
-      .swagger-ui .opblock-tag[data-tag^="Seller Pro"],
-      .swagger-ui .opblock-tag[data-tag^="Seller - Tour"],
-      .swagger-ui .opblock-tag[data-tag^="Seller - Dep"] { background-color: #f5e8f8; border-left: 4px solid #9012fe; }
-      .swagger-ui .opblock-tag[data-tag^="Admin"] { background-color: #f8e8e8; border-left: 4px solid #f93e3e; }
+        /* Tag colors */
+        --public-bg: #e8f4f8;       --public-border: #61affe;
+        --auth-bg:   #e8f8f5;       --auth-border:  #49cc90;
+        --user-bg:   #f9f1e8;       --user-border:  #f5a623;
+        --seller-bg: #f5e8f8;       --seller-border:#9012fe;
+        --admin-bg:  #f8e8e8;       --admin-border: #f93e3e;
 
-      /* Method styling */
-      .swagger-ui .opblock-summary-method { font-weight: bold; }
-      .swagger-ui .opblock.opblock-get { border-color: #61affe; }
-      .swagger-ui .opblock.opblock-post { border-color: #49cc90; }
-      .swagger-ui .opblock.opblock-put { border-color: #fca130; }
-      .swagger-ui .opblock.opblock-delete { border-color: #f93e3e; }
+        /* Method colors */
+        --get-border:    #61affe;
+        --post-border:   #49cc90;
+        --put-border:    #fca130;
+        --delete-border: #f93e3e;
+      }
+
+      .swagger-ui .topbar {
+        display: var(--topbar-display);
+      }
+
+      .swagger-ui .information-container {
+        padding: var(--info-padding);
+      }
+
+      .swagger-ui .scheme-container {
+        padding: var(--scheme-padding);
+      }
+
+      .swagger-ui section.models {
+        display: none;
+      }
+
+      .swagger-ui .opblock-tag {
+        font-size: var(--tag-font-size);
+        margin: 10px 0 5px;
+        padding: 10px;
+        border-radius: var(--tag-radius);
+        transition: background-color 0.2s;
+      }
+
+      .swagger-ui .opblock-tag:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+      }
+
+      /* Public */
+      .swagger-ui .opblock-tag[data-tag^="Public"] {
+        background-color: var(--public-bg);
+        border-left: 4px solid var(--public-border);
+      }
+
+      /* Authentication */
+      .swagger-ui .opblock-tag[data-tag^="User Authentication"],
+      .swagger-ui .opblock-tag[data-tag^="Seller Authentication"],
+      .swagger-ui .opblock-tag[data-tag^="Admin Authentication"] {
+        background-color: var(--auth-bg);
+        border-left: 4px solid var(--auth-border);
+      }
+
+      /* User endpoints */
+      .swagger-ui .opblock-tag[data-tag^="User Profile"],
+      .swagger-ui .opblock-tag[data-tag^="User - Booking Management"],
+      .swagger-ui .opblock-tag[data-tag^="User - Payment Management"],
+      .swagger-ui .opblock-tag[data-tag^="User - Invoice Management"],
+      .swagger-ui .opblock-tag[data-tag^="User - Review Management"] {
+        background-color: var(--user-bg);
+        border-left: 4px solid var(--user-border);
+      }
+
+      /* Seller endpoints */
+      .swagger-ui .opblock-tag[data-tag^="Seller Profile"],
+      .swagger-ui .opblock-tag[data-tag^="Seller - Dashboard"],
+      .swagger-ui .opblock-tag[data-tag^="Seller - Tour Management"],
+      .swagger-ui .opblock-tag[data-tag^="Seller - Departure Management"],
+      .swagger-ui .opblock-tag[data-tag^="Seller - Booking Management"],
+      .swagger-ui .opblock-tag[data-tag^="Seller - Invoice Management"],
+      .swagger-ui .opblock-tag[data-tag^="Seller - Review Management"],
+      .swagger-ui .opblock-tag[data-tag^="Seller - Subscription Management"] {
+        background-color: var(--seller-bg);
+        border-left: 4px solid var(--seller-border);
+      }
+
+      /* Admin endpoints */
+      .swagger-ui .opblock-tag[data-tag^="Admin - User Management"],
+      .swagger-ui .opblock-tag[data-tag^="Admin - Seller Management"],
+      .swagger-ui .opblock-tag[data-tag^="Admin - Subscription Management"],
+      .swagger-ui .opblock-tag[data-tag^="Admin - System Management"] {
+        background-color: var(--admin-bg);
+        border-left: 4px solid var(--admin-border);
+      }
+
+      /* HTTP methods */
+      .swagger-ui .opblock-summary-method {
+        font-weight: bold;
+      }
+
+      .swagger-ui .opblock.opblock-get    { border-color: var(--get-border); }
+      .swagger-ui .opblock.opblock-post   { border-color: var(--post-border); }
+      .swagger-ui .opblock.opblock-put    { border-color: var(--put-border); }
+      .swagger-ui .opblock.opblock-delete { border-color: var(--delete-border); }
     `,
     customSiteTitle: 'Tour Management API Documentation',
     docExpansion: 'none',

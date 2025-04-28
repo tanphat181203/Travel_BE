@@ -87,7 +87,17 @@ CREATE TABLE IF NOT EXISTS Review (
     review_id SERIAL PRIMARY KEY,
     tour_id INTEGER NOT NULL REFERENCES Tour(tour_id),
     user_id INTEGER NOT NULL REFERENCES Users(id),
-    rating INTEGER CHECK (rating >= 1 AND rating <= 5),
+    ratings JSONB NOT NULL,
+    average_rating DECIMAL(3, 1) GENERATED ALWAYS AS (
+        (
+            (ratings->>'Services')::INTEGER +
+            (ratings->>'Quality')::INTEGER +
+            (ratings->>'Guides')::INTEGER +
+            (ratings->>'Safety')::INTEGER +
+            (ratings->>'Foods')::INTEGER +
+            (ratings->>'Hotels')::INTEGER
+        )::DECIMAL / 6
+    ) STORED,
     comment TEXT,
     timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
@@ -195,7 +205,7 @@ CREATE INDEX IF NOT EXISTS idx_chatbothistory_interaction_time ON ChatbotHistory
 
 CREATE INDEX IF NOT EXISTS idx_review_tour_id ON Review(tour_id);
 CREATE INDEX IF NOT EXISTS idx_review_user_id ON Review(user_id);
-CREATE INDEX IF NOT EXISTS idx_review_rating ON Review(rating);
+CREATE INDEX IF NOT EXISTS idx_review_average_rating ON Review(average_rating);
 CREATE INDEX IF NOT EXISTS idx_review_timestamp ON Review("timestamp");
 
 CREATE INDEX IF NOT EXISTS idx_booking_departure_id ON Booking(departure_id);

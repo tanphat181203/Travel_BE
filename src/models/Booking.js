@@ -419,6 +419,25 @@ class Booking {
     }
   }
 
+  static async hasUserBookedTour(userId, tourId) {
+    const query = `
+      SELECT COUNT(*)
+      FROM Booking b
+      JOIN Departure d ON b.departure_id = d.departure_id
+      WHERE b.user_id = $1
+      AND d.tour_id = $2
+      AND b.booking_status = 'confirmed'
+    `;
+
+    try {
+      const result = await pool.query(query, [userId, tourId]);
+      return parseInt(result.rows[0].count) > 0;
+    } catch (error) {
+      logger.error(`Error checking if user has booked tour: ${error.message}`);
+      throw error;
+    }
+  }
+
   static async getRemainingCapacity(departureId) {
     try {
       const tourQuery = `
@@ -460,7 +479,6 @@ class Booking {
       const client = await pool.connect();
 
       try {
-        // Get booking counts by status
         const bookingStatsQuery = `
           SELECT
             COUNT(*) as total_bookings,
@@ -477,7 +495,6 @@ class Booking {
           sellerId,
         ]);
 
-        // Get recent booking stats
         const recentStatsQuery = `
           SELECT
             COUNT(*) as recent_bookings,
