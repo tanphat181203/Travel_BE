@@ -143,11 +143,28 @@ export const createSubscriptionPayment = async (req, res) => {
         .json({ message: 'This subscription package is not available' });
     }
 
+    // Check if seller already has an active subscription
+    const activeSubscription =
+      await SellerSubscription.findActiveSubscriptionBySellerId(seller_id);
+
     // Calculate expiry date
-    const expiryDate = new Date();
-    expiryDate.setDate(
-      expiryDate.getDate() + subscriptionPackage.duration_days
-    );
+    let expiryDate;
+    if (activeSubscription) {
+      // If there's an active subscription, extend from its expiry date
+      expiryDate = new Date(activeSubscription.expiry_date);
+      expiryDate.setDate(
+        expiryDate.getDate() + subscriptionPackage.duration_days
+      );
+      logger.info(
+        `Extending subscription from existing expiry date: ${activeSubscription.expiry_date} to ${expiryDate}`
+      );
+    } else {
+      // If no active subscription, start from today
+      expiryDate = new Date();
+      expiryDate.setDate(
+        expiryDate.getDate() + subscriptionPackage.duration_days
+      );
+    }
 
     // Create subscription record
     const subscriptionData = {
