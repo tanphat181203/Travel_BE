@@ -120,19 +120,18 @@ class SellerSubscription {
     const query = `
       UPDATE SellerSubscription
       SET status = $2
-      ${transactionId ? ', transaction_id = $3' : ''}
       WHERE subscription_id = $1
       RETURNING *
     `;
 
-    const values = transactionId
-      ? [subscriptionId, status, transactionId]
-      : [subscriptionId, status];
+    const values = [subscriptionId, status];
 
     try {
       const result = await pool.query(query, values);
       logger.info(
-        `Subscription status updated: subscriptionId=${subscriptionId}, status=${status}`
+        `Subscription status updated: subscriptionId=${subscriptionId}, status=${status}${
+          transactionId ? ', transactionId=' + transactionId : ''
+        }`
       );
       return result.rows[0];
     } catch (error) {

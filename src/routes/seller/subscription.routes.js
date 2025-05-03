@@ -2,6 +2,7 @@ import express from 'express';
 import * as subscriptionController from '../../controllers/seller/subscription.controller.js';
 import { authenticateJWT, requireSeller } from '../../middlewares/auth.js';
 import requestLogger from './../../middlewares/requestLogger.js';
+import logger from '../../utils/logger.js';
 
 const router = express.Router();
 
@@ -321,6 +322,54 @@ router.get(
   requireSeller,
   requestLogger,
   subscriptionController.getSubscriptionInvoices
+);
+
+/**
+ * @swagger
+ * /seller/subscriptions/stripe-webhook:
+ *   post:
+ *     tags:
+ *       - Seller - Subscription Management
+ *     summary: Stripe webhook endpoint for subscription payments
+ *     description: Endpoint for Stripe to send subscription payment notifications
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Webhook processed successfully
+ *       400:
+ *         description: Error processing webhook
+ */
+// Special route for Stripe webhooks - needs raw body for signature verification
+router.post(
+  '/stripe-webhook',
+  express.raw({ type: 'application/json' }),
+  (req, res, next) => {
+    // Add logging middleware for debugging
+    logger.info(
+      `Received Stripe webhook request to /api/seller/subscriptions/stripe-webhook`
+    );
+    logger.info(`Content-Type: ${req.headers['content-type']}`);
+    logger.info(
+      `Stripe-Signature: ${
+        req.headers['stripe-signature'] ? 'Present' : 'Missing'
+      }`
+    );
+
+    // Check if the body is a Buffer (raw) as expected
+    if (Buffer.isBuffer(req.body)) {
+      logger.info(`Request body is a Buffer of length: ${req.body.length}`);
+    } else {
+      logger.warn(`Request body is NOT a Buffer: ${typeof req.body}`);
+    }
+
+    next();
+  },
+  subscriptionController.stripeWebhook
 );
 
 export default router;

@@ -16,7 +16,10 @@ const app = express();
 
 // Apply JSON parsing middleware to all routes except Stripe webhooks
 app.use((req, res, next) => {
-  if (req.originalUrl === '/api/user/payments/stripe-webhook') {
+  if (
+    req.originalUrl === '/api/user/payments/stripe-webhook' ||
+    req.originalUrl === '/api/seller/subscriptions/stripe-webhook'
+  ) {
     next();
   } else {
     express.json()(req, res, next);

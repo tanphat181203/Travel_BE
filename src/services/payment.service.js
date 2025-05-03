@@ -135,14 +135,34 @@ export const retrievePaymentIntent = async (paymentIntentId) => {
   }
 };
 
-export const constructStripeEvent = (payload, signature) => {
+export const constructStripeEvent = (
+  payload,
+  signature,
+  webhookSecret = null
+) => {
   try {
-    const event = stripe.webhooks.constructEvent(
-      payload,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET
+    const secretKey = webhookSecret || process.env.STRIPE_WEBHOOK_SECRET;
+
+    if (!secretKey) {
+      throw new Error('Stripe webhook secret is not configured');
+    }
+
+    if (!signature) {
+      throw new Error('Stripe signature is missing from request headers');
+    }
+
+    if (!payload) {
+      throw new Error('Request payload is empty or invalid');
+    }
+
+    // Log the first few characters of the signature and secret for debugging
+    logger.info(
+      `Using webhook secret starting with: ${secretKey.substring(0, 5)}...`
     );
-    logger.info(`Constructed Stripe webhook event: ${event.type}`);
+    logger.info(`Signature starts with: ${signature.substring(0, 10)}...`);
+
+    const event = stripe.webhooks.constructEvent(payload, signature, secretKey);
+    logger.info(`Successfully constructed Stripe webhook event: ${event.type}`);
     return event;
   } catch (error) {
     logger.error(`Error constructing Stripe webhook event: ${error.message}`);
