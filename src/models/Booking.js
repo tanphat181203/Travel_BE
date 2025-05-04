@@ -13,14 +13,18 @@ class Booking {
       total_price,
       booking_status = 'pending',
       special_requests = '',
+      original_price = null,
+      discount = null,
+      promotion_id = null,
     } = bookingData;
 
     const query = `
       INSERT INTO Booking (
         departure_id, user_id, num_adults, num_children_120_140,
-        num_children_100_120, total_price, booking_status, special_requests
+        num_children_100_120, total_price, booking_status, special_requests,
+        original_price, discount, promotion_id
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *
     `;
 
@@ -33,6 +37,9 @@ class Booking {
       total_price,
       booking_status,
       special_requests,
+      original_price,
+      discount,
+      promotion_id,
     ];
 
     try {
@@ -153,12 +160,14 @@ class Booking {
     departureId,
     numAdults,
     numChildren120140,
-    numChildren100120
+    numChildren100120,
+    applyPromotion = true,
+    promotionId = null
   ) {
     const query = `
-      SELECT price_adult, price_child_120_140, price_child_100_120
-      FROM Departure
-      WHERE departure_id = $1
+      SELECT d.price_adult, d.price_child_120_140, d.price_child_100_120, d.tour_id
+      FROM Departure d
+      WHERE d.departure_id = $1
     `;
 
     try {
@@ -168,15 +177,37 @@ class Booking {
         throw new Error('Departure not found');
       }
 
-      const { price_adult, price_child_120_140, price_child_100_120 } =
+      const { price_adult, price_child_120_140, price_child_100_120, tour_id } =
         result.rows[0];
 
-      const totalPrice =
+      const basePrice =
         numAdults * price_adult +
         numChildren120140 * price_child_120_140 +
         numChildren100120 * price_child_100_120;
 
-      return parseFloat(totalPrice.toFixed(2));
+      if (!applyPromotion || !promotionId) {
+        return {
+          originalPrice: parseFloat(basePrice.toFixed(2)),
+          discountedPrice: parseFloat(basePrice.toFixed(2)),
+          discount: 0,
+          appliedPromotion: null,
+        };
+      }
+
+      const { default: Promotion } = await import('./Promotion.js');
+
+      const priceDetails = await Promotion.calculateDiscount(
+        tour_id,
+        basePrice,
+        promotionId
+      );
+
+      return {
+        originalPrice: parseFloat(priceDetails.originalPrice.toFixed(2)),
+        discountedPrice: parseFloat(priceDetails.discountedPrice.toFixed(2)),
+        discount: parseFloat(priceDetails.discount.toFixed(2)),
+        appliedPromotion: priceDetails.appliedPromotion,
+      };
     } catch (error) {
       logger.error(`Error calculating total price: ${error.message}`);
       throw error;

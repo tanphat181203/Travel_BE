@@ -55,6 +55,11 @@ const options = {
         name: 'Public - Reviews',
         description: 'Public endpoints for viewing tour reviews',
       },
+      {
+        name: 'Public - Promotion',
+        description:
+          'Public endpoints for viewing tour promotions and calculating discounts',
+      },
 
       // Authentication endpoints
       {
@@ -131,6 +136,11 @@ const options = {
         name: 'Seller - Subscription Management',
         description:
           'Endpoints for sellers to manage their subscription packages',
+      },
+      {
+        name: 'Seller - Promotion Management',
+        description:
+          'Endpoints for sellers to create and manage promotions for their tours',
       },
 
       // Admin endpoints
@@ -251,7 +261,8 @@ export const setupSwagger = (app) => {
       .swagger-ui .opblock-tag[data-tag^="Seller - Booking Management"],
       .swagger-ui .opblock-tag[data-tag^="Seller - Invoice Management"],
       .swagger-ui .opblock-tag[data-tag^="Seller - Review Management"],
-      .swagger-ui .opblock-tag[data-tag^="Seller - Subscription Management"] {
+      .swagger-ui .opblock-tag[data-tag^="Seller - Subscription Management"],
+      .swagger-ui .opblock-tag[data-tag^="Seller - Promotion Management"] {
         background-color: var(--seller-bg);
         border-left: 4px solid var(--seller-border);
       }

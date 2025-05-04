@@ -133,6 +133,9 @@ export const confirmPayment = async (req, res) => {
           num_adults: booking.num_adults,
           num_children_120_140: booking.num_children_120_140,
           num_children_100_120: booking.num_children_100_120,
+          original_price: booking.original_price,
+          discount: booking.discount,
+          promotion_id: booking.promotion_id,
           confirmed_by: sellerId,
         }),
       };

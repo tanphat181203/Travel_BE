@@ -453,6 +453,26 @@ export const generateInvoiceTemplate = (
             `
                 : ''
             }
+            ${
+              details.original_price &&
+              details.discount &&
+              parseFloat(details.discount) > 0
+                ? `
+            <tr>
+              <td colspan="3" class="text-right">Tạm tính:</td>
+              <td class="text-right">${formatCurrency(
+                parseFloat(details.original_price)
+              )}</td>
+            </tr>
+            <tr>
+              <td colspan="3" class="text-right">Giảm giá:</td>
+              <td class="text-right">- ${formatCurrency(
+                parseFloat(details.discount)
+              )}</td>
+            </tr>
+            `
+                : ''
+            }
             <tr class="total-row">
               <td colspan="3" class="text-right">Tổng cộng:</td>
               <td class="text-right">${formatCurrency(
@@ -462,6 +482,23 @@ export const generateInvoiceTemplate = (
           </tbody>
         </table>
 
+        ${
+          details.promotion_id &&
+          details.discount &&
+          parseFloat(details.discount) > 0
+            ? `
+        <!-- Promotion Information -->
+        <div class="payment-info" style="border-left: 4px solid var(--accent-color); margin-bottom: 20px;">
+          <div class="section-title">Thông Tin Khuyến Mãi</div>
+          <p><strong>Mã khuyến mãi:</strong> #${details.promotion_id}</p>
+          <p><strong>Giảm giá:</strong> ${formatCurrency(
+            parseFloat(details.discount)
+          )}</p>
+        </div>
+        `
+            : ''
+        }
+
         <!-- Payment Information -->
         <div class="payment-info">
           <div class="section-title">Thông Tin Thanh Toán</div>
@@ -470,6 +507,8 @@ export const generateInvoiceTemplate = (
             ${
               details.payment_method === 'vnpay'
                 ? 'VNPay'
+                : details.payment_method === 'stripe'
+                ? 'Stripe'
                 : 'Thanh toán trực tiếp'
             }
           </p>

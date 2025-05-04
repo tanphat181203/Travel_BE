@@ -15,6 +15,7 @@ export const createBooking = async (req, res) => {
       num_children_120_140,
       num_children_100_120,
       special_requests,
+      promotion_id,
     } = req.body;
     const user_id = req.user.id;
 
@@ -64,11 +65,13 @@ export const createBooking = async (req, res) => {
       });
     }
 
-    const total_price = await Booking.calculateTotalPrice(
+    const priceDetails = await Booking.calculateTotalPrice(
       departure_id,
       num_adults,
       num_children_120_140 || 0,
-      num_children_100_120 || 0
+      num_children_100_120 || 0,
+      promotion_id ? true : false,
+      promotion_id
     );
 
     const bookingData = {
@@ -77,7 +80,12 @@ export const createBooking = async (req, res) => {
       num_adults,
       num_children_120_140: num_children_120_140 || 0,
       num_children_100_120: num_children_100_120 || 0,
-      total_price,
+      total_price: priceDetails.discountedPrice,
+      original_price: priceDetails.originalPrice,
+      discount: priceDetails.discount,
+      promotion_id: priceDetails.appliedPromotion
+        ? priceDetails.appliedPromotion.promotion_id
+        : null,
       booking_status: 'pending',
       special_requests: special_requests || '',
     };

@@ -111,6 +111,9 @@ CREATE TABLE IF NOT EXISTS Booking (
     num_children_120_140 INTEGER NOT NULL,
     num_children_100_120 INTEGER NOT NULL,
     total_price DECIMAL(10,2) NOT NULL,
+    original_price DECIMAL(10,2),
+    discount DECIMAL(10,2),
+    promotion_id INTEGER REFERENCES Promotion(promotion_id),
     booking_status VARCHAR(50) NOT NULL,
     special_requests TEXT,
     booking_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
@@ -149,6 +152,8 @@ CREATE TABLE IF NOT EXISTS Checkout (
 -- 13. Promotion
 CREATE TABLE IF NOT EXISTS Promotion (
     promotion_id SERIAL PRIMARY KEY,
+    seller_id INTEGER NOT NULL REFERENCES Users(id),
+    name VARCHAR(255) NOT NULL,
     description TEXT NOT NULL,
     type VARCHAR(50) NOT NULL DEFAULT 'percent',
     discount DECIMAL(5,2) NOT NULL,
@@ -223,6 +228,7 @@ CREATE INDEX IF NOT EXISTS idx_checkout_booking_id ON Checkout(booking_id);
 CREATE INDEX IF NOT EXISTS idx_checkout_payment_status ON Checkout(payment_status);
 CREATE INDEX IF NOT EXISTS idx_checkout_payment_date ON Checkout(payment_date);
 
+CREATE INDEX IF NOT EXISTS idx_promotion_seller_id ON Promotion(seller_id);
 CREATE INDEX IF NOT EXISTS idx_promotion_status ON Promotion(status);
 CREATE INDEX IF NOT EXISTS idx_promotion_start_date ON Promotion(start_date);
 CREATE INDEX IF NOT EXISTS idx_promotion_end_date ON Promotion(end_date);

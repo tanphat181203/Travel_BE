@@ -12,7 +12,7 @@ const router = express.Router();
  *     tags:
  *       - User - Booking Management
  *     summary: Create a new booking
- *     description: Create a new booking for a tour departure
+ *     description: Create a new booking for a tour departure. Optionally specify a promotion ID to apply a specific promotion.
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -43,6 +43,9 @@ const router = express.Router();
  *               special_requests:
  *                 type: string
  *                 description: Special requests for the booking
+ *               promotion_id:
+ *                 type: integer
+ *                 description: Optional ID of a specific promotion to apply to the booking. If not provided, no promotion will be applied.
  *     responses:
  *       201:
  *         description: Booking created successfully
