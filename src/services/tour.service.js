@@ -264,6 +264,12 @@ class TourService {
       paramMap.destination = paramIndex++;
     }
 
+    if (params.departure_location !== undefined) {
+      conditions.push(`t.departure_location ILIKE $${paramIndex}`);
+      values.push(`%${params.departure_location}%`);
+      paramMap.departure_location = paramIndex++;
+    }
+
     if (params.seller_id !== undefined) {
       conditions.push(`t.seller_id = $${paramIndex}`);
       values.push(params.seller_id);

@@ -81,6 +81,11 @@ const router = express.Router();
  *           type: integer
  *         description: Maximum number of people
  *       - in: query
+ *         name: departure_location
+ *         schema:
+ *           type: string
+ *         description: Filter by departure location
+ *       - in: query
  *         name: departure_date
  *         schema:
  *           type: string
