@@ -87,6 +87,8 @@ CREATE TABLE IF NOT EXISTS Review (
     review_id SERIAL PRIMARY KEY,
     tour_id INTEGER NOT NULL REFERENCES Tour(tour_id),
     user_id INTEGER NOT NULL REFERENCES Users(id),
+    booking_id INTEGER NOT NULL REFERENCES Booking(booking_id),
+    departure_id INTEGER NOT NULL REFERENCES Departure(departure_id),
     ratings JSONB NOT NULL,
     average_rating DECIMAL(3, 1) GENERATED ALWAYS AS (
         (
@@ -210,6 +212,8 @@ CREATE INDEX IF NOT EXISTS idx_chatbothistory_interaction_time ON ChatbotHistory
 
 CREATE INDEX IF NOT EXISTS idx_review_tour_id ON Review(tour_id);
 CREATE INDEX IF NOT EXISTS idx_review_user_id ON Review(user_id);
+CREATE INDEX IF NOT EXISTS idx_review_booking_id ON Review(booking_id);
+CREATE INDEX IF NOT EXISTS idx_review_departure_id ON Review(departure_id);
 CREATE INDEX IF NOT EXISTS idx_review_average_rating ON Review(average_rating);
 CREATE INDEX IF NOT EXISTS idx_review_timestamp ON Review("timestamp");
 

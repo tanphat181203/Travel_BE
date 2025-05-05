@@ -12,7 +12,7 @@ const router = express.Router();
  *     tags:
  *       - User - Review Management
  *     summary: Create a new review
- *     description: Create a new review for a tour
+ *     description: Create a new review for a tour departure. User must have booked the specific departure and the departure date must have passed.
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -23,10 +23,15 @@ const router = express.Router();
  *             type: object
  *             required:
  *               - tour_id
+ *               - departure_id
  *               - ratings
  *             properties:
  *               tour_id:
  *                 type: integer
+ *                 description: ID of the tour
+ *               departure_id:
+ *                 type: integer
+ *                 description: ID of the specific departure that was booked
  *               ratings:
  *                 type: object
  *                 required:
@@ -70,6 +75,8 @@ const router = express.Router();
  *         description: Invalid input data
  *       401:
  *         description: Unauthorized - not logged in
+ *       403:
+ *         description: Forbidden - user hasn't booked this departure or departure date hasn't passed yet
  *       404:
  *         description: Tour not found
  *       500:

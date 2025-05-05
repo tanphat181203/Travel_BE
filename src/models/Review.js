@@ -4,17 +4,31 @@ import { addPaginationToQuery } from '../utils/pagination.js';
 
 class Review {
   static async create(reviewData) {
-    const { tour_id, user_id, ratings, comment = '' } = reviewData;
+    const {
+      tour_id,
+      user_id,
+      booking_id,
+      departure_id,
+      ratings,
+      comment = '',
+    } = reviewData;
 
     const query = `
       INSERT INTO Review (
-        tour_id, user_id, ratings, comment
+        tour_id, user_id, booking_id, departure_id, ratings, comment
       )
-      VALUES ($1, $2, $3::jsonb, $4)
+      VALUES ($1, $2, $3, $4, $5::jsonb, $6)
       RETURNING *
     `;
 
-    const values = [tour_id, user_id, JSON.stringify(ratings), comment];
+    const values = [
+      tour_id,
+      user_id,
+      booking_id,
+      departure_id,
+      JSON.stringify(ratings),
+      comment,
+    ];
 
     try {
       const result = await pool.query(query, values);
@@ -28,10 +42,12 @@ class Review {
 
   static async findById(reviewId) {
     const query = `
-      SELECT r.*, u.name as user_name, u.avatar_url as user_avatar, t.title as tour_title
+      SELECT r.*, u.name as user_name, u.avatar_url as user_avatar,
+             t.title as tour_title, d.start_date as departure_date
       FROM Review r
       JOIN Users u ON r.user_id = u.id
       JOIN Tour t ON r.tour_id = t.tour_id
+      JOIN Departure d ON r.departure_id = d.departure_id
       WHERE r.review_id = $1
     `;
 
@@ -50,9 +66,11 @@ class Review {
     const totalItems = parseInt(countResult.rows[0].count);
 
     let query = `
-      SELECT r.*, u.name as user_name, u.avatar_url as user_avatar
+      SELECT r.*, u.name as user_name, u.avatar_url as user_avatar,
+             d.start_date as departure_date
       FROM Review r
       JOIN Users u ON r.user_id = u.id
+      JOIN Departure d ON r.departure_id = d.departure_id
       WHERE r.tour_id = $1
       ORDER BY r.timestamp DESC
     `;
@@ -76,9 +94,10 @@ class Review {
     const totalItems = parseInt(countResult.rows[0].count);
 
     let query = `
-      SELECT r.*, t.title as tour_title
+      SELECT r.*, t.title as tour_title, d.start_date as departure_date
       FROM Review r
       JOIN Tour t ON r.tour_id = t.tour_id
+      JOIN Departure d ON r.departure_id = d.departure_id
       WHERE r.user_id = $1
       ORDER BY r.timestamp DESC
     `;
@@ -253,10 +272,12 @@ class Review {
       const totalItems = parseInt(countResult.rows[0].count);
 
       let query = `
-        SELECT r.*, u.name as user_name, u.avatar_url as user_avatar, t.title as tour_title
+        SELECT r.*, u.name as user_name, u.avatar_url as user_avatar,
+               t.title as tour_title, d.start_date as departure_date
         FROM Review r
         JOIN Users u ON r.user_id = u.id
         JOIN Tour t ON r.tour_id = t.tour_id
+        JOIN Departure d ON r.departure_id = d.departure_id
         WHERE r.tour_id = ANY($1::int[])
         ORDER BY r.timestamp DESC
       `;
@@ -269,6 +290,77 @@ class Review {
       return { reviews: result.rows, totalItems };
     } catch (error) {
       logger.error(`Error finding reviews by seller tours: ${error.message}`);
+      throw error;
+    }
+  }
+
+  static async canUserReviewDeparture(userId, departureId) {
+    try {
+      // Check if the user has booked this specific departure
+      const bookingQuery = `
+        SELECT b.booking_id, d.start_date, CURRENT_DATE as today
+        FROM Booking b
+        JOIN Departure d ON b.departure_id = d.departure_id
+        WHERE b.user_id = $1
+        AND b.departure_id = $2
+        AND b.booking_status = 'confirmed'
+      `;
+
+      const bookingResult = await pool.query(bookingQuery, [
+        userId,
+        departureId,
+      ]);
+
+      if (bookingResult.rows.length === 0) {
+        return {
+          canReview: false,
+          message: 'You must book this tour departure before leaving a review',
+          code: 'BOOKING_REQUIRED',
+        };
+      }
+
+      // Check if the departure date has passed
+      const booking = bookingResult.rows[0];
+      const startDate = new Date(booking.start_date);
+      const today = new Date(booking.today);
+
+      if (startDate > today) {
+        return {
+          canReview: false,
+          message: 'You can only review a tour after its departure date',
+          code: 'BEFORE_DEPARTURE_DATE',
+        };
+      }
+
+      // Check if the user has already reviewed this booking
+      const reviewQuery = `
+        SELECT review_id
+        FROM Review
+        WHERE user_id = $1
+        AND booking_id = $2
+      `;
+
+      const reviewResult = await pool.query(reviewQuery, [
+        userId,
+        booking.booking_id,
+      ]);
+
+      if (reviewResult.rows.length > 0) {
+        return {
+          canReview: false,
+          message: 'You have already reviewed this booking',
+          code: 'ALREADY_REVIEWED',
+        };
+      }
+
+      return {
+        canReview: true,
+        bookingId: booking.booking_id,
+      };
+    } catch (error) {
+      logger.error(
+        `Error checking if user can review departure: ${error.message}`
+      );
       throw error;
     }
   }

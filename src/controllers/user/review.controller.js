@@ -9,8 +9,14 @@ import {
 
 export const createReview = async (req, res) => {
   try {
-    const { tour_id, ratings, comment } = req.body;
+    const { tour_id, departure_id, ratings, comment } = req.body;
     const user_id = req.userId;
+
+    if (!tour_id || !departure_id) {
+      return res.status(400).json({
+        message: 'Tour ID and departure ID are required',
+      });
+    }
 
     const requiredRatings = [
       'Services',
@@ -44,23 +50,31 @@ export const createReview = async (req, res) => {
       return res.status(404).json({ message: 'Tour not found' });
     }
 
-    const hasBooked = await Booking.hasUserBookedTour(user_id, tour_id);
-    if (!hasBooked) {
+    // Check if the user can review this departure
+    const reviewCheck = await Review.canUserReviewDeparture(
+      user_id,
+      departure_id
+    );
+    if (!reviewCheck.canReview) {
       return res.status(403).json({
-        message: 'You must book this tour before leaving a review',
-        code: 'BOOKING_REQUIRED',
+        message: reviewCheck.message,
+        code: reviewCheck.code,
       });
     }
 
     const reviewData = {
       tour_id,
       user_id,
+      booking_id: reviewCheck.bookingId,
+      departure_id,
       ratings,
       comment,
     };
 
     const newReview = await Review.create(reviewData);
-    logger.info(`User ${user_id} created review for tour ${tour_id}`);
+    logger.info(
+      `User ${user_id} created review for tour ${tour_id}, departure ${departure_id}`
+    );
 
     return res.status(201).json(newReview);
   } catch (error) {
