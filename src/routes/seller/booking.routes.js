@@ -103,6 +103,47 @@ const router = express.Router();
  *                     type: string
  *                   user_phone:
  *                     type: string
+ *                   contact_info:
+ *                     type: object
+ *                     properties:
+ *                       fullname:
+ *                         type: string
+ *                       email:
+ *                         type: string
+ *                       phone:
+ *                         type: string
+ *                       address:
+ *                         type: string
+ *                   passengers:
+ *                     type: array
+ *                     items:
+ *                       type: object
+ *                       properties:
+ *                         fullname:
+ *                           type: string
+ *                         gender:
+ *                           type: string
+ *                         birthday:
+ *                           type: string
+ *                           format: date
+ *                         ticket_type:
+ *                           type: string
+ *                           enum: [adult, children_120_140, children_100_120, baby]
+ *                   order_notes:
+ *                     type: object
+ *                     properties:
+ *                       smoking:
+ *                         type: boolean
+ *                       vegetarian:
+ *                         type: boolean
+ *                       high_floor:
+ *                         type: boolean
+ *                       pregnant:
+ *                         type: boolean
+ *                       disabled:
+ *                         type: boolean
+ *                       invoice_needed:
+ *                         type: boolean
  *                   payment_method:
  *                     type: string
  *                   payment_status:
@@ -242,6 +283,47 @@ router.get(
  *                   type: string
  *                 user_phone:
  *                   type: string
+ *                 contact_info:
+ *                   type: object
+ *                   properties:
+ *                     fullname:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     phone:
+ *                       type: string
+ *                     address:
+ *                       type: string
+ *                 passengers:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       fullname:
+ *                         type: string
+ *                       gender:
+ *                         type: string
+ *                       birthday:
+ *                         type: string
+ *                         format: date
+ *                       ticket_type:
+ *                         type: string
+ *                         enum: [adult, children_120_140, children_100_120, baby]
+ *                 order_notes:
+ *                   type: object
+ *                   properties:
+ *                     smoking:
+ *                       type: boolean
+ *                     vegetarian:
+ *                       type: boolean
+ *                     high_floor:
+ *                       type: boolean
+ *                     pregnant:
+ *                       type: boolean
+ *                     disabled:
+ *                       type: boolean
+ *                     invoice_needed:
+ *                       type: boolean
  *                 checkout_id:
  *                   type: integer
  *                 payment_method:

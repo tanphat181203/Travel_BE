@@ -137,6 +137,9 @@ export const confirmPayment = async (req, res) => {
           discount: booking.discount,
           promotion_id: booking.promotion_id,
           confirmed_by: sellerId,
+          contact_info: booking.contact_info,
+          passengers: booking.passengers,
+          order_notes: booking.order_notes,
         }),
       };
 

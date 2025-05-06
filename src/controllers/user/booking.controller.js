@@ -16,6 +16,9 @@ export const createBooking = async (req, res) => {
       num_children_100_120,
       special_requests,
       promotion_id,
+      contact_info,
+      passengers,
+      order_notes,
     } = req.body;
     const user_id = req.user.id;
 
@@ -30,6 +33,117 @@ export const createBooking = async (req, res) => {
         .status(400)
         .json({ message: 'At least one adult is required' });
     }
+
+    if (!contact_info) {
+      return res.status(400).json({
+        message: 'Contact information is required',
+        field: 'contact_info',
+      });
+    }
+
+    const { fullname, email, phone, address } = contact_info;
+    if (!fullname || !email || !phone || !address) {
+      return res.status(400).json({
+        message:
+          'Contact information must include fullname, email, phone, and address',
+        field: 'contact_info',
+        missing: [
+          !fullname ? 'fullname' : null,
+          !email ? 'email' : null,
+          !phone ? 'phone' : null,
+          !address ? 'address' : null,
+        ].filter(Boolean),
+      });
+    }
+
+    if (!passengers || !Array.isArray(passengers) || passengers.length === 0) {
+      return res.status(400).json({
+        message: 'Passenger information is required and must be an array',
+        field: 'passengers',
+      });
+    }
+
+    const adultPassengers = passengers.filter(
+      (p) => p.ticket_type === 'adult'
+    ).length;
+    const children120140Passengers = passengers.filter(
+      (p) => p.ticket_type === 'children_120_140'
+    ).length;
+    const children100120Passengers = passengers.filter(
+      (p) => p.ticket_type === 'children_100_120'
+    ).length;
+
+    if (adultPassengers !== num_adults) {
+      return res.status(400).json({
+        message: `Number of adult passengers (${adultPassengers}) does not match number of adult tickets (${num_adults})`,
+        field: 'passengers',
+      });
+    }
+
+    if (children120140Passengers !== (num_children_120_140 || 0)) {
+      return res.status(400).json({
+        message: `Number of children 120-140cm passengers (${children120140Passengers}) does not match number of children 120-140cm tickets (${
+          num_children_120_140 || 0
+        })`,
+        field: 'passengers',
+      });
+    }
+
+    if (children100120Passengers !== (num_children_100_120 || 0)) {
+      return res.status(400).json({
+        message: `Number of children 100-120cm passengers (${children100120Passengers}) does not match number of children 100-120cm tickets (${
+          num_children_100_120 || 0
+        })`,
+        field: 'passengers',
+      });
+    }
+
+    for (let i = 0; i < passengers.length; i++) {
+      const passenger = passengers[i];
+      const { fullname, gender, birthday, ticket_type } = passenger;
+
+      if (!fullname || !gender || !birthday || !ticket_type) {
+        return res.status(400).json({
+          message: `Passenger at index ${i} is missing required fields`,
+          field: 'passengers',
+          index: i,
+          missing: [
+            !fullname ? 'fullname' : null,
+            !gender ? 'gender' : null,
+            !birthday ? 'birthday' : null,
+            !ticket_type ? 'ticket_type' : null,
+          ].filter(Boolean),
+        });
+      }
+
+      if (
+        !['adult', 'children_120_140', 'children_100_120', 'baby'].includes(
+          ticket_type
+        )
+      ) {
+        return res.status(400).json({
+          message: `Invalid ticket_type for passenger at index ${i}. Must be one of: adult, children_120_140, children_100_120, baby`,
+          field: 'passengers',
+          index: i,
+        });
+      }
+    }
+
+    const defaultOrderNotes = {
+      smoking: false,
+      vegetarian: false,
+      high_floor: false,
+      pregnant: false,
+      disabled: false,
+      invoice_needed: false,
+    };
+
+    const processedOrderNotes = order_notes
+      ? {
+          ...defaultOrderNotes,
+          ...order_notes,
+        }
+      : defaultOrderNotes;
 
     const departure = await Departure.findById(departure_id);
     if (!departure) {
@@ -88,6 +202,9 @@ export const createBooking = async (req, res) => {
         : null,
       booking_status: 'pending',
       special_requests: special_requests || '',
+      contact_info,
+      passengers,
+      order_notes: processedOrderNotes,
     };
 
     const booking = await Booking.create(bookingData);

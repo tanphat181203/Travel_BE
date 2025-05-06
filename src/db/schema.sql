@@ -118,7 +118,10 @@ CREATE TABLE IF NOT EXISTS Booking (
     promotion_id INTEGER REFERENCES Promotion(promotion_id),
     booking_status VARCHAR(50) NOT NULL,
     special_requests TEXT,
-    booking_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    booking_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    contact_info JSONB,
+    passengers JSONB,
+    order_notes JSONB DEFAULT '{"smoking": false, "vegetarian": false, "high_floor": false, "pregnant": false, "disabled": false, "invoice_needed": false}'
 );
 
 -- 10. Images

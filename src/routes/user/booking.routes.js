@@ -24,6 +24,8 @@ const router = express.Router();
  *             required:
  *               - departure_id
  *               - num_adults
+ *               - contact_info
+ *               - passengers
  *             properties:
  *               departure_id:
  *                 type: integer
@@ -46,6 +48,80 @@ const router = express.Router();
  *               promotion_id:
  *                 type: integer
  *                 description: Optional ID of a specific promotion to apply to the booking. If not provided, no promotion will be applied.
+ *               contact_info:
+ *                 type: object
+ *                 required:
+ *                   - fullname
+ *                   - email
+ *                   - phone
+ *                   - address
+ *                 description: Contact information of the person making the booking
+ *                 properties:
+ *                   fullname:
+ *                     type: string
+ *                     description: Full name of the contact person
+ *                   email:
+ *                     type: string
+ *                     description: Email address of the contact person
+ *                   phone:
+ *                     type: string
+ *                     description: Phone number of the contact person
+ *                   address:
+ *                     type: string
+ *                     description: Address of the contact person
+ *               passengers:
+ *                 type: array
+ *                 description: List of passengers for the booking
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - fullname
+ *                     - gender
+ *                     - birthday
+ *                     - ticket_type
+ *                   properties:
+ *                     fullname:
+ *                       type: string
+ *                       description: Full name of the passenger
+ *                     gender:
+ *                       type: string
+ *                       description: Gender of the passenger
+ *                     birthday:
+ *                       type: string
+ *                       format: date
+ *                       description: Birthday of the passenger (YYYY-MM-DD)
+ *                     ticket_type:
+ *                       type: string
+ *                       enum: [adult, children_120_140, children_100_120, baby]
+ *                       description: Type of ticket for the passenger
+ *               order_notes:
+ *                 type: object
+ *                 description: Special notes for the order
+ *                 properties:
+ *                   smoking:
+ *                     type: boolean
+ *                     default: false
+ *                     description: Whether smoking is preferred
+ *                   vegetarian:
+ *                     type: boolean
+ *                     default: false
+ *                     description: Whether vegetarian food is required
+ *                   high_floor:
+ *                     type: boolean
+ *                     default: false
+ *                     description: Whether a high floor is preferred
+ *                   pregnant:
+ *                     type: boolean
+ *                     default: false
+ *                     description: Whether the booking includes a pregnant person
+ *                   disabled:
+ *                     type: boolean
+ *                     default: false
+ *                     description: Whether the booking includes a disabled person
+ *                   invoice_needed:
+ *                     type: boolean
+ *                     default: false
+ *                     description: Whether an invoice is needed
  *     responses:
  *       201:
  *         description: Booking created successfully

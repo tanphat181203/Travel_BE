@@ -296,13 +296,27 @@ export const generateInvoiceTemplate = (
           font-size: 16px;
         }
 
-        /* Payment Information */
-        .payment-info {
+        /* Payment Information, Passenger Information, Special Requirements */
+        .payment-info, .passenger-info, .special-requirements {
           margin-bottom: 40px;
           padding: 20px;
           border-radius: 8px;
           background-color: var(--light-color);
           border-left: 4px solid var(--secondary-color);
+        }
+
+        .passenger-info {
+          border-left: 4px solid var(--primary-color);
+        }
+
+        .special-requirements {
+          border-left: 4px solid var(--accent-color);
+        }
+
+        .special-requirements ul {
+          list-style-type: disc;
+          padding-left: 20px;
+          margin-top: 10px;
         }
 
         .payment-info p {
@@ -368,15 +382,26 @@ export const generateInvoiceTemplate = (
         <!-- Customer and Tour Info -->
         <div class="customer-info">
           <div class="billing-info">
-            <div class="section-title">Thông Tin Khách Hàng</div>
-            <p><strong>Họ và tên:</strong> <span>${user.name}</span></p>
-            <p><strong>Email:</strong> <span>${user.email}</span></p>
-            <p><strong>Điện thoại:</strong> <span>${
-              user.phone_number || 'N/A'
-            }</span></p>
-            <p><strong>Địa chỉ:</strong> <span>${
-              user.address || 'N/A'
-            }</span></p>
+            <div class="section-title">Thông Tin Người Đặt</div>
+            ${
+              details.contact_info
+                ? `
+                <p><strong>Họ và tên:</strong> <span>${details.contact_info.fullname}</span></p>
+                <p><strong>Email:</strong> <span>${details.contact_info.email}</span></p>
+                <p><strong>Điện thoại:</strong> <span>${details.contact_info.phone}</span></p>
+                <p><strong>Địa chỉ:</strong> <span>${details.contact_info.address}</span></p>
+              `
+                : `
+                <p><strong>Họ và tên:</strong> <span>${user.name}</span></p>
+                <p><strong>Email:</strong> <span>${user.email}</span></p>
+                <p><strong>Điện thoại:</strong> <span>${
+                  user.phone_number || 'N/A'
+                }</span></p>
+                <p><strong>Địa chỉ:</strong> <span>${
+                  user.address || 'N/A'
+                }</span></p>
+              `
+            }
           </div>
 
           <div class="tour-info">
@@ -496,6 +521,107 @@ export const generateInvoiceTemplate = (
           )}</p>
         </div>
         `
+            : ''
+        }
+
+        <!-- Passenger Information -->
+        ${
+          details.passengers && details.passengers.length > 0
+            ? `
+          <div class="passenger-info">
+            <div class="section-title">Thông Tin Hành Khách</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Họ và tên</th>
+                  <th>Giới tính</th>
+                  <th>Ngày sinh</th>
+                  <th>Loại vé</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${details.passengers
+                  .map(
+                    (passenger) => `
+                  <tr>
+                    <td>${passenger.fullname}</td>
+                    <td>${
+                      passenger.gender === 'male'
+                        ? 'Nam'
+                        : passenger.gender === 'female'
+                        ? 'Nữ'
+                        : passenger.gender
+                    }</td>
+                    <td>${new Date(passenger.birthday).toLocaleDateString(
+                      'vi-VN'
+                    )}</td>
+                    <td>${
+                      passenger.ticket_type === 'adult'
+                        ? 'Người lớn'
+                        : passenger.ticket_type === 'children_120_140'
+                        ? 'Trẻ em 120-140cm'
+                        : passenger.ticket_type === 'children_100_120'
+                        ? 'Trẻ em 100-120cm'
+                        : passenger.ticket_type === 'baby'
+                        ? 'Em bé'
+                        : passenger.ticket_type
+                    }</td>
+                  </tr>
+                `
+                  )
+                  .join('')}
+              </tbody>
+            </table>
+          </div>
+          `
+            : ''
+        }
+
+        <!-- Special Requirements -->
+        ${
+          details.order_notes
+            ? `
+          <div class="special-requirements">
+            <div class="section-title">Yêu Cầu Đặc Biệt</div>
+            <ul>
+              ${
+                details.order_notes.smoking
+                  ? '<li>Yêu cầu phòng hút thuốc</li>'
+                  : ''
+              }
+              ${
+                details.order_notes.vegetarian
+                  ? '<li>Yêu cầu thức ăn chay</li>'
+                  : ''
+              }
+              ${
+                details.order_notes.high_floor
+                  ? '<li>Yêu cầu phòng tầng cao</li>'
+                  : ''
+              }
+              ${
+                details.order_notes.pregnant
+                  ? '<li>Có người mang thai</li>'
+                  : ''
+              }
+              ${
+                details.order_notes.disabled
+                  ? '<li>Có người khuyết tật</li>'
+                  : ''
+              }
+              ${
+                details.order_notes.invoice_needed
+                  ? '<li>Yêu cầu xuất hóa đơn</li>'
+                  : ''
+              }
+            </ul>
+            ${
+              !Object.values(details.order_notes).some((value) => value)
+                ? '<p>Không có yêu cầu đặc biệt</p>'
+                : ''
+            }
+          </div>
+          `
             : ''
         }
 

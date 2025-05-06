@@ -16,15 +16,25 @@ class Booking {
       original_price = null,
       discount = null,
       promotion_id = null,
+      contact_info = null,
+      passengers = null,
+      order_notes = {
+        smoking: false,
+        vegetarian: false,
+        high_floor: false,
+        pregnant: false,
+        disabled: false,
+        invoice_needed: false,
+      },
     } = bookingData;
 
     const query = `
       INSERT INTO Booking (
         departure_id, user_id, num_adults, num_children_120_140,
         num_children_100_120, total_price, booking_status, special_requests,
-        original_price, discount, promotion_id
+        original_price, discount, promotion_id, contact_info, passengers, order_notes
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING *
     `;
 
@@ -40,6 +50,9 @@ class Booking {
       original_price,
       discount,
       promotion_id,
+      contact_info ? JSON.stringify(contact_info) : null,
+      passengers ? JSON.stringify(passengers) : null,
+      JSON.stringify(order_notes),
     ];
 
     try {
@@ -272,6 +285,9 @@ class Booking {
         b.total_price,
         b.booking_status,
         b.booking_date,
+        b.contact_info,
+        b.passengers,
+        b.order_notes,
         d.start_date,
         t.tour_id,
         t.title as tour_title,
