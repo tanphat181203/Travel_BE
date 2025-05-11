@@ -170,6 +170,32 @@ router.get(
 
 /**
  * @swagger
+ * /user/bookings/confirmed:
+ *   get:
+ *     tags:
+ *       - User - Booking Management
+ *     summary: Get user confirmed bookings
+ *     description: Get only confirmed bookings for the authenticated user
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of user confirmed bookings
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
+router.get(
+  '/confirmed',
+  authenticateJWT,
+  requireUser,
+  requestLogger,
+  bookingController.getUserConfirmedBookings
+);
+
+/**
+ * @swagger
  * /user/bookings/{id}:
  *   get:
  *     tags:

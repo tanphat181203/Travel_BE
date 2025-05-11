@@ -265,6 +265,34 @@ export const getUserBookings = async (req, res) => {
   }
 };
 
+export const getUserConfirmedBookings = async (req, res) => {
+  try {
+    const user_id = req.user.id;
+
+    const { page, limit, offset } = getPaginationParams(req.query);
+
+    const { bookings, totalItems } = await Booking.findConfirmedByUserId(
+      user_id,
+      limit,
+      offset
+    );
+
+    const pagination = createPaginationMetadata(page, limit, totalItems);
+
+    logger.info(
+      `Retrieved ${bookings.length} confirmed bookings for user ${user_id} (page ${page})`
+    );
+
+    res.status(200).json({
+      bookings,
+      pagination,
+    });
+  } catch (error) {
+    logger.error(`Error getting user confirmed bookings: ${error.message}`);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
 export const getBookingById = async (req, res) => {
   try {
     const { id } = req.params;

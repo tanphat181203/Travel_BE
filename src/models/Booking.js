@@ -118,6 +118,41 @@ class Booking {
     }
   }
 
+  static async findConfirmedByUserId(userId, limit, offset) {
+    const baseQuery = `
+      SELECT b.*, d.start_date, d.tour_id, t.title as tour_title, t.departure_location
+      FROM Booking b
+      JOIN Departure d ON b.departure_id = d.departure_id
+      JOIN Tour t ON d.tour_id = t.tour_id
+      WHERE b.user_id = $1 AND b.booking_status = 'confirmed'
+      ORDER BY b.booking_date DESC
+    `;
+
+    const countQuery = `
+      SELECT COUNT(*)
+      FROM Booking b
+      JOIN Departure d ON b.departure_id = d.departure_id
+      JOIN Tour t ON d.tour_id = t.tour_id
+      WHERE b.user_id = $1 AND b.booking_status = 'confirmed'
+    `;
+
+    try {
+      const countResult = await pool.query(countQuery, [userId]);
+      const totalItems = parseInt(countResult.rows[0].count);
+
+      let query = baseQuery;
+      if (limit !== undefined && offset !== undefined) {
+        query = addPaginationToQuery(query, limit, offset);
+      }
+
+      const result = await pool.query(query, [userId]);
+      return { bookings: result.rows, totalItems };
+    } catch (error) {
+      logger.error(`Error finding confirmed bookings by user ID: ${error.message}`);
+      throw error;
+    }
+  }
+
   static async updateStatus(bookingId, status) {
     const query = `
       UPDATE Booking
