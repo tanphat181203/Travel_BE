@@ -161,7 +161,7 @@ CREATE TABLE IF NOT EXISTS Promotion (
     name VARCHAR(255) NOT NULL,
     description TEXT NOT NULL,
     type VARCHAR(50) NOT NULL DEFAULT 'percent',
-    discount DECIMAL(5,2) NOT NULL,
+    discount DECIMAL(10,2) NOT NULL,
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
     status VARCHAR(50) NOT NULL

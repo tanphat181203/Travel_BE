@@ -217,3 +217,81 @@ export const deleteReview = async (req, res) => {
       .json({ message: 'Server error', error: error.message });
   }
 };
+
+export const createSimpleReview = async (req, res) => {
+  try {
+    const { tour_id, ratings, comment } = req.body;
+    const user_id = req.userId;
+
+    if (!tour_id) {
+      return res.status(400).json({
+        message: 'Tour ID is required',
+      });
+    }
+
+    const requiredRatings = [
+      'Services',
+      'Quality',
+      'Guides',
+      'Safety',
+      'Foods',
+      'Hotels',
+    ];
+    const missingRatings = requiredRatings.filter(
+      (field) => !ratings || ratings[field] === undefined
+    );
+
+    if (missingRatings.length > 0) {
+      return res.status(400).json({
+        message: `Missing required ratings: ${missingRatings.join(', ')}`,
+      });
+    }
+
+    for (const key in ratings) {
+      const rating = parseInt(ratings[key]);
+      if (isNaN(rating) || rating < 1 || rating > 5) {
+        return res.status(400).json({
+          message: `Invalid rating value for ${key}. Must be between 1 and 5.`,
+        });
+      }
+    }
+
+    const tour = await Tour.findById(tour_id);
+    if (!tour) {
+      return res.status(404).json({ message: 'Tour not found' });
+    }
+
+    const departureCheck = await Review.findLatestDepartureForUserAndTour(
+      user_id,
+      tour_id
+    );
+    
+    if (!departureCheck.found) {
+      return res.status(403).json({
+        message: departureCheck.message,
+        code: departureCheck.code,
+      });
+    }
+
+    const reviewData = {
+      tour_id,
+      user_id,
+      booking_id: departureCheck.bookingId,
+      departure_id: departureCheck.departureId,
+      ratings,
+      comment,
+    };
+
+    const newReview = await Review.create(reviewData);
+    logger.info(
+      `User ${user_id} created review for tour ${tour_id}, departure ${departureCheck.departureId}`
+    );
+
+    return res.status(201).json(newReview);
+  } catch (error) {
+    logger.error(`Error creating simple review: ${error.message}`);
+    return res
+      .status(500)
+      .json({ message: 'Server error', error: error.message });
+  }
+};

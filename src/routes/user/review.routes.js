@@ -92,6 +92,87 @@ router.post(
 
 /**
  * @swagger
+ * /user/reviews/simple:
+ *   post:
+ *     tags:
+ *       - User - Review Management
+ *     summary: Create a new review with just tour_id
+ *     description: Create a new review for a tour using just the tour ID. The system will automatically find the latest eligible departure (completed and not yet reviewed) for the user.
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - tour_id
+ *               - ratings
+ *             properties:
+ *               tour_id:
+ *                 type: integer
+ *                 description: ID of the tour
+ *               ratings:
+ *                 type: object
+ *                 required:
+ *                   - Services
+ *                   - Quality
+ *                   - Guides
+ *                   - Safety
+ *                   - Foods
+ *                   - Hotels
+ *                 properties:
+ *                   Services:
+ *                     type: integer
+ *                     minimum: 1
+ *                     maximum: 5
+ *                   Quality:
+ *                     type: integer
+ *                     minimum: 1
+ *                     maximum: 5
+ *                   Guides:
+ *                     type: integer
+ *                     minimum: 1
+ *                     maximum: 5
+ *                   Safety:
+ *                     type: integer
+ *                     minimum: 1
+ *                     maximum: 5
+ *                   Foods:
+ *                     type: integer
+ *                     minimum: 1
+ *                     maximum: 5
+ *                   Hotels:
+ *                     type: integer
+ *                     minimum: 1
+ *                     maximum: 5
+ *               comment:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Review created successfully
+ *       400:
+ *         description: Invalid input data
+ *       401:
+ *         description: Unauthorized - not logged in
+ *       403:
+ *         description: Forbidden - user hasn't booked this tour or no eligible departures found
+ *       404:
+ *         description: Tour not found
+ *       500:
+ *         description: Server error
+ */
+router.post(
+  '/simple',
+  authenticateJWT,
+  requireUser,
+  requestLogger,
+  reviewController.createSimpleReview
+);
+
+/**
+ * @swagger
  * /user/reviews:
  *   get:
  *     tags:

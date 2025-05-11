@@ -364,6 +364,64 @@ class Review {
       throw error;
     }
   }
+
+  static async findLatestDepartureForUserAndTour(userId, tourId) {
+    try {
+      const query = `
+        SELECT b.booking_id, b.departure_id, d.start_date, CURRENT_DATE as today
+        FROM Booking b
+        JOIN Departure d ON b.departure_id = d.departure_id
+        WHERE b.user_id = $1
+        AND d.tour_id = $2
+        AND b.booking_status = 'confirmed'
+        AND d.start_date <= CURRENT_DATE
+        ORDER BY d.start_date DESC
+        LIMIT 1
+      `;
+
+      const result = await pool.query(query, [userId, tourId]);
+      
+      if (result.rows.length === 0) {
+        return { 
+          found: false, 
+          message: 'No eligible bookings found for this tour',
+          code: 'NO_ELIGIBLE_BOOKINGS'
+        };
+      }
+      
+      const booking = result.rows[0];
+      const reviewQuery = `
+        SELECT review_id
+        FROM Review
+        WHERE user_id = $1
+        AND booking_id = $2
+      `;
+
+      const reviewResult = await pool.query(reviewQuery, [
+        userId,
+        booking.booking_id,
+      ]);
+
+      if (reviewResult.rows.length > 0) {
+        return {
+          found: false,
+          message: 'You have already reviewed this booking',
+          code: 'ALREADY_REVIEWED',
+        };
+      }
+
+      return {
+        found: true,
+        departureId: booking.departure_id,
+        bookingId: booking.booking_id
+      };
+    } catch (error) {
+      logger.error(
+        `Error finding latest departure for user and tour: ${error.message}`
+      );
+      throw error;
+    }
+  }
 }
 
 export default Review;
