@@ -353,9 +353,9 @@ class Promotion {
       let discountAmount = 0;
 
       if (appliedPromotion.type === 'percent') {
-        discountAmount = (price * appliedPromotion.discount) / 100;
+        discountAmount = (price * parseFloat(appliedPromotion.discount)) / 100;
       } else if (appliedPromotion.type === 'fixed') {
-        discountAmount = appliedPromotion.discount;
+        discountAmount = parseFloat(appliedPromotion.discount);
       }
 
       const discountedPrice = price - discountAmount;

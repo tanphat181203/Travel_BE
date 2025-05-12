@@ -250,10 +250,14 @@ class Booking {
         promotionId
       );
 
+      const originalPrice = parseFloat(priceDetails.originalPrice);
+      const discountedPrice = parseFloat(priceDetails.discountedPrice);
+      const discount = parseFloat(priceDetails.discount || 0);
+
       return {
-        originalPrice: parseFloat(priceDetails.originalPrice.toFixed(2)),
-        discountedPrice: parseFloat(priceDetails.discountedPrice.toFixed(2)),
-        discount: parseFloat(priceDetails.discount.toFixed(2)),
+        originalPrice: parseFloat(originalPrice.toFixed(2)),
+        discountedPrice: parseFloat(discountedPrice.toFixed(2)),
+        discount: parseFloat(discount.toFixed(2)),
         appliedPromotion: priceDetails.appliedPromotion,
       };
     } catch (error) {
