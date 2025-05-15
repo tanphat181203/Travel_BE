@@ -54,6 +54,43 @@ router.get(
 
 /**
  * @swagger
+ * /admin/subscriptions/packages/{id}:
+ *   get:
+ *     tags:
+ *       - Admin - Subscription Management
+ *     summary: Get a subscription package by ID
+ *     description: Retrieve a specific subscription package by its ID (admin access only)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Subscription package ID
+ *     responses:
+ *       200:
+ *         description: Subscription package details
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Not authorized - admin access required
+ *       404:
+ *         description: Subscription package not found
+ *       500:
+ *         description: Server error
+ */
+router.get(
+  '/packages/:id',
+  authenticateJWT,
+  requireAdmin,
+  requestLogger,
+  subscriptionController.getSubscriptionPackageById
+);
+
+/**
+ * @swagger
  * /admin/subscriptions/packages:
  *   post:
  *     tags:

@@ -187,3 +187,22 @@ export const triggerExpiredSubscriptionsUpdate = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
+export const getSubscriptionPackageById = async (req, res) => {
+  try {
+    const packageId = req.params.id;
+
+    const subscriptionPackage = await SubscriptionPackage.findById(packageId);
+    
+    if (!subscriptionPackage) {
+      return res.status(404).json({ message: 'Subscription package not found' });
+    }
+
+    logger.info(`Admin retrieved subscription package with ID: ${packageId}`);
+
+    res.status(200).json(subscriptionPackage);
+  } catch (error) {
+    logger.error(`Error getting subscription package: ${error.message}`);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
