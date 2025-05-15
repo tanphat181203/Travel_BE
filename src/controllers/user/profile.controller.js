@@ -6,6 +6,8 @@ export const getUserProfile = async (req, res, next) => {
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
+    const userStats = await User.getUserStats(req.userId);
+
     const sanitizedUser = {
       id: user.id,
       email: user.email,
@@ -15,6 +17,8 @@ export const getUserProfile = async (req, res, next) => {
       phone_number: user.phone_number,
       address: user.address,
       status: user.status,
+      total_bookings: parseInt(userStats.total_bookings) || 0,
+      total_reviews: parseInt(userStats.total_reviews) || 0
     };
 
     res.json(sanitizedUser);

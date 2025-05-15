@@ -174,6 +174,17 @@ class User {
     const result = await this.executeQuery(query, [sellerId, 'seller']);
     return result.rows[0];
   }
+
+  static async getUserStats(userId) {
+    const query = `
+      SELECT
+        (SELECT COUNT(*) FROM Booking WHERE user_id = $1) as total_bookings,
+        (SELECT COUNT(*) FROM Review WHERE user_id = $1) as total_reviews
+    `;
+    
+    const result = await this.executeQuery(query, [userId]);
+    return result.rows[0];
+  }
 }
 
 export default User;
