@@ -101,7 +101,12 @@ class Tour {
   }
 
   static async findById(tourId) {
-    const tourQuery = 'SELECT * FROM Tour WHERE tour_id = $1';
+    const tourQuery = `
+      SELECT t.*, u.name as seller_name 
+      FROM Tour t
+      JOIN Users u ON t.seller_id = u.id
+      WHERE t.tour_id = $1
+    `;
     const tourResult = await pool.query(tourQuery, [tourId]);
     const tour = tourResult.rows[0];
 
@@ -124,7 +129,12 @@ class Tour {
     const countResult = await pool.query(countQuery, [sellerId]);
     const totalItems = parseInt(countResult.rows[0].count);
 
-    let query = 'SELECT * FROM Tour WHERE seller_id = $1';
+    let query = `
+      SELECT t.*, u.name as seller_name 
+      FROM Tour t
+      JOIN Users u ON t.seller_id = u.id
+      WHERE t.seller_id = $1
+    `;
 
     if (limit !== undefined && offset !== undefined) {
       query = addPaginationToQuery(query, limit, offset);

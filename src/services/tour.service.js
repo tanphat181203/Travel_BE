@@ -214,6 +214,7 @@ class TourService {
         SELECT
           t.tour_id,
           t.seller_id,
+          u.name as seller_name,
           t.title,
           t.duration,
           t.departure_location,
@@ -244,6 +245,8 @@ class TourService {
     baseQuery += `
         FROM
           Tour t
+        JOIN
+          Users u ON t.seller_id = u.id
         JOIN
           Departure d ON t.tour_id = d.tour_id
         WHERE 1=1
@@ -373,6 +376,19 @@ class TourService {
 
   static async enrichToursWithAdditionalData(tours) {
     const tourIds = tours.map((tour) => tour.tour_id);
+    
+    // Get seller names
+    const sellerIds = tours.map((tour) => tour.seller_id);
+    const sellerQuery = `
+      SELECT id, name 
+      FROM Users 
+      WHERE id = ANY($1)
+    `;
+    const sellerResult = await pool.query(sellerQuery, [sellerIds]);
+    const sellerNames = {};
+    sellerResult.rows.forEach((seller) => {
+      sellerNames[seller.id] = seller.name;
+    });
 
     const imagesQuery = `
       SELECT * FROM Images
@@ -392,6 +408,9 @@ class TourService {
     });
 
     for (const tour of tours) {
+      // Add seller_name to each tour
+      tour.seller_name = sellerNames[tour.seller_id] || '';
+      
       tour.images = imagesByTourId[tour.tour_id] || [];
 
       if (!tour.next_departure_id && tour.tour_availability) {

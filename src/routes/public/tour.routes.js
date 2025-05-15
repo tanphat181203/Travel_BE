@@ -111,6 +111,8 @@ const router = express.Router();
  *                     type: integer
  *                   seller_id:
  *                     type: integer
+ *                   seller_name:
+ *                     type: string
  *                   title:
  *                     type: string
  *                   duration:
@@ -330,6 +332,8 @@ router.get('/search-ranges', requestLogger, tourController.getSearchRanges);
  *                   type: integer
  *                 seller_id:
  *                   type: integer
+ *                 seller_name:
+ *                   type: string
  *                 title:
  *                   type: string
  *                 duration:
