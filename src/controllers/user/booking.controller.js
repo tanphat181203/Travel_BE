@@ -249,6 +249,13 @@ export const getUserBookings = async (req, res) => {
       offset
     );
 
+    const bookingsWithReviewStatus = await Promise.all(
+      bookings.map(async (booking) => {
+        const isReview = await Booking.hasReview(booking.booking_id);
+        return { ...booking, isReview };
+      })
+    );
+
     const pagination = createPaginationMetadata(page, limit, totalItems);
 
     logger.info(
@@ -256,7 +263,7 @@ export const getUserBookings = async (req, res) => {
     );
 
     res.status(200).json({
-      bookings,
+      bookings: bookingsWithReviewStatus,
       pagination,
     });
   } catch (error) {
@@ -276,6 +283,13 @@ export const getUserConfirmedBookings = async (req, res) => {
       limit,
       offset
     );
+    
+    const bookingsWithReviewStatus = await Promise.all(
+      bookings.map(async (booking) => {
+        const isReview = await Booking.hasReview(booking.booking_id);
+        return { ...booking, isReview };
+      })
+    );
 
     const pagination = createPaginationMetadata(page, limit, totalItems);
 
@@ -284,7 +298,7 @@ export const getUserConfirmedBookings = async (req, res) => {
     );
 
     res.status(200).json({
-      bookings,
+      bookings: bookingsWithReviewStatus,
       pagination,
     });
   } catch (error) {
@@ -310,9 +324,11 @@ export const getBookingById = async (req, res) => {
         .json({ message: 'Not authorized to access this booking' });
     }
 
+    const isReview = await Booking.hasReview(booking.booking_id);
+
     logger.info(`Retrieved booking ${id} for user ${user_id}`);
 
-    res.status(200).json({ booking });
+    res.status(200).json({ booking: { ...booking, isReview } });
   } catch (error) {
     logger.error(`Error getting booking by ID: ${error.message}`);
     res.status(500).json({ message: 'Server error', error: error.message });

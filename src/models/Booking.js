@@ -624,38 +624,38 @@ class Booking {
   }
 
   static async getRecentBySellerId(sellerId, limit = 5) {
-    try {
-      const query = `
-        SELECT
-          b.booking_id,
-          b.total_price,
-          b.booking_status,
-          b.booking_date,
-          d.start_date,
-          t.title as tour_title,
-          u.name as user_name,
-          u.email as user_email,
-          c.payment_status
-        FROM Booking b
-        JOIN Departure d ON b.departure_id = d.departure_id
-        JOIN Tour t ON d.tour_id = t.tour_id
-        JOIN Users u ON b.user_id = u.id
-        LEFT JOIN Checkout c ON b.booking_id = c.booking_id AND
-                              (c.payment_status = 'pending' OR
-                               c.payment_status = 'awaiting_seller_confirmation' OR
-                               c.payment_status = 'completed')
-        WHERE t.seller_id = $1
-        ORDER BY b.booking_date DESC
-        LIMIT $2
-      `;
+    const query = `
+      SELECT b.*, d.start_date, t.title as tour_title, u.name as user_name
+      FROM Booking b
+      JOIN Departure d ON b.departure_id = d.departure_id
+      JOIN Tour t ON d.tour_id = t.tour_id
+      JOIN Users u ON b.user_id = u.id
+      WHERE t.seller_id = $1
+      ORDER BY b.booking_date DESC
+      LIMIT $2
+    `;
 
+    try {
       const result = await pool.query(query, [sellerId, limit]);
       return result.rows;
     } catch (error) {
-      logger.error(
-        `Error getting recent bookings for seller ${sellerId}:`,
-        error
-      );
+      logger.error(`Error getting recent bookings by seller ID: ${error.message}`);
+      throw error;
+    }
+  }
+
+  static async hasReview(bookingId) {
+    const query = `
+      SELECT COUNT(*) as count
+      FROM Review
+      WHERE booking_id = $1
+    `;
+
+    try {
+      const result = await pool.query(query, [bookingId]);
+      return parseInt(result.rows[0].count) > 0;
+    } catch (error) {
+      logger.error(`Error checking if booking has review: ${error.message}`);
       throw error;
     }
   }
