@@ -178,7 +178,7 @@ class User {
   static async getUserStats(userId) {
     const query = `
       SELECT
-        (SELECT COUNT(*) FROM Booking WHERE user_id = $1) as total_bookings,
+        (SELECT COUNT(*) FROM Booking WHERE user_id = $1 AND booking_status = 'confirmed') as total_bookings,
         (SELECT COUNT(*) FROM Review WHERE user_id = $1) as total_reviews
     `;
     
