@@ -149,6 +149,10 @@ const options = {
 
       // Admin endpoints
       {
+        name: 'Admin Profile',
+        description: 'Endpoints for admins to manage their profile information',
+      },
+      {
         name: 'Admin - User Management',
         description: 'Endpoints for admins to manage user accounts',
       },
