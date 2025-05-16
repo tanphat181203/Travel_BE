@@ -60,18 +60,26 @@ class SubscriptionPackage {
     
     baseQuery += ` ORDER BY price ASC`;
 
-    const paginatedQuery = addPaginationToQuery(baseQuery, limit, offset, paramIndex);
-
     try {
       const countResult = await pool.query(countQuery, queryParams);
       const totalItems = parseInt(countResult.rows[0].count);
 
-      const result = await pool.query(paginatedQuery, [...queryParams, limit, offset]);
-      
-      return {
-        packages: result.rows,
-        totalItems
-      };
+      let paginatedQuery;
+      if (queryParams.length > 0) {
+        paginatedQuery = `${baseQuery} LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+        const result = await pool.query(paginatedQuery, [...queryParams, limit, offset]);
+        return {
+          packages: result.rows,
+          totalItems
+        };
+      } else {
+        paginatedQuery = addPaginationToQuery(baseQuery, limit, offset);
+        const result = await pool.query(paginatedQuery);
+        return {
+          packages: result.rows,
+          totalItems
+        };
+      }
     } catch (error) {
       logger.error(`Error finding subscription packages: ${error.message}`);
       throw error;

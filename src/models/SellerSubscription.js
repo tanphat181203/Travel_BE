@@ -76,7 +76,7 @@ class SellerSubscription {
       const countResult = await pool.query(countQuery, [sellerId]);
       const totalItems = parseInt(countResult.rows[0].count);
 
-      const paginatedQuery = addPaginationToQuery(baseQuery, limit, offset, 2);
+      const paginatedQuery = `${baseQuery} LIMIT $2 OFFSET $3`;
       const result = await pool.query(paginatedQuery, [
         sellerId,
         limit,
@@ -206,8 +206,8 @@ class SellerSubscription {
         const countResult = await client.query(countQuery);
         const totalItems = parseInt(countResult.rows[0].count);
 
-        const paginatedQuery = `${query} LIMIT $1 OFFSET $2`;
-        const result = await client.query(paginatedQuery, [limit, offset]);
+        const paginatedQuery = addPaginationToQuery(query, limit, offset);
+        const result = await client.query(paginatedQuery);
 
         return {
           subscriptions: result.rows,
