@@ -77,6 +77,7 @@ CREATE TABLE IF NOT EXISTS History (
 CREATE TABLE IF NOT EXISTS ChatbotHistory (
     history_id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES Users(id),
+    session_id VARCHAR(255),
     interaction_time TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     message TEXT NOT NULL,
     response TEXT
@@ -211,6 +212,7 @@ CREATE INDEX IF NOT EXISTS idx_history_action_type ON History(action_type);
 CREATE INDEX IF NOT EXISTS idx_history_timestamp ON History("timestamp");
 
 CREATE INDEX IF NOT EXISTS idx_chatbothistory_user_id ON ChatbotHistory(user_id);
+CREATE INDEX IF NOT EXISTS idx_chatbothistory_session_id ON ChatbotHistory(session_id);
 CREATE INDEX IF NOT EXISTS idx_chatbothistory_interaction_time ON ChatbotHistory(interaction_time);
 
 CREATE INDEX IF NOT EXISTS idx_review_tour_id ON Review(tour_id);
