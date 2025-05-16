@@ -48,6 +48,10 @@ const options = {
         description: 'Public endpoints for browsing and searching tours',
       },
       {
+        name: 'Public Sellers',
+        description: 'Public endpoints for browsing and searching sellers',
+      },
+      {
         name: 'Public Departures',
         description: 'Public endpoints for viewing available tour departures',
       },

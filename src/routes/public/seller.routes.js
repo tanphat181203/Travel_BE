@@ -1,0 +1,70 @@
+import express from 'express';
+import * as sellerController from '../../controllers/public/seller.controller.js';
+import requestLogger from './../../middlewares/requestLogger.js';
+
+const router = express.Router();
+
+/**
+ * @swagger
+ * /public/sellers:
+ *   get:
+ *     tags:
+ *       - Public Sellers
+ *     summary: Get all active sellers
+ *     description: Retrieve a list of all active sellers
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of items per page
+ *     responses:
+ *       200:
+ *         description: A list of active sellers
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 sellers:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                       name:
+ *                         type: string
+ *                       avatar_url:
+ *                         type: string
+ *                         nullable: true
+ *                       phone_number:
+ *                         type: string
+ *                         nullable: true
+ *                       address:
+ *                         type: string
+ *                         nullable: true
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total_items:
+ *                       type: integer
+ *                     total_pages:
+ *                       type: integer
+ *                     current_page:
+ *                       type: integer
+ *                     per_page:
+ *                       type: integer
+ *       500:
+ *         description: Server error
+ */
+router.get('/', requestLogger, sellerController.getAllSellers);
+
+export default router; 
