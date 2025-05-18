@@ -107,6 +107,12 @@ router.get(
  *                 status:
  *                   type: string
  *                   description: Account status (pending_verification, active, suspended)
+ *                 total_confirmed_bookings:
+ *                   type: integer
+ *                   description: Total number of confirmed bookings by the user
+ *                 total_reviews:
+ *                   type: integer
+ *                   description: Total number of reviews submitted by the user
  *       401:
  *         description: Unauthorized
  *       403:
@@ -130,8 +136,8 @@ router.get(
  *   put:
  *     tags:
  *       - Admin - User Management
- *     summary: Update user
- *     description: Update user details (admin access only)
+ *     summary: Update user status and contact information
+ *     description: Update user status, phone number, and address (admin access only)
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -148,18 +154,9 @@ router.get(
  *           schema:
  *             type: object
  *             properties:
- *               name:
- *                 type: string
- *               email:
- *                 type: string
- *               role:
- *                 type: string
- *                 enum: [user, seller, admin]
  *               status:
  *                 type: string
  *                 enum: [pending_verification, active, suspended]
- *               avatar_url:
- *                 type: string
  *               phone_number:
  *                 type: string
  *               address:

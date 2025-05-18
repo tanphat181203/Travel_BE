@@ -42,12 +42,18 @@ export const getUserById = async (req, res, next) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    const userStats = await User.getUserStats(userId);
+
     const sanitizedUser = { ...user };
     delete sanitizedUser.password;
     delete sanitizedUser.reset_password_token;
     delete sanitizedUser.email_verification_token;
 
-    res.json(sanitizedUser);
+    res.json({
+      ...sanitizedUser,
+      total_confirmed_bookings: parseInt(userStats.total_bookings) || 0,
+      total_reviews: parseInt(userStats.total_reviews) || 0
+    });
   } catch (error) {
     next(error);
   }
@@ -56,7 +62,7 @@ export const getUserById = async (req, res, next) => {
 export const updateUser = async (req, res, next) => {
   try {
     const userId = req.params.id;
-    const { name, email, role, status } = req.body;
+    const { status, phone_number, address } = req.body;
 
     if (userId === req.userId) {
       return res
@@ -66,7 +72,7 @@ export const updateUser = async (req, res, next) => {
 
     const user = await User.findByIdAndUpdate(
       userId,
-      { name, email, role, status },
+      { status, phone_number, address },
       { new: true }
     );
 
