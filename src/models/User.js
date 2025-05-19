@@ -35,11 +35,21 @@ class User {
     const values = [];
     let paramIndex = 1;
 
+    if (!filter.status) {
+      filter.status = { notEqual: 'deleted' };
+    }
+
     Object.entries(filter).forEach(([key, value], index) => {
       const snakeCaseKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
       if (index > 0) query += ' AND ';
-      query += `${snakeCaseKey} = $${paramIndex}`;
-      values.push(value);
+      
+      if (typeof value === 'object' && value.notEqual !== undefined) {
+        query += `${snakeCaseKey} <> $${paramIndex}`;
+        values.push(value.notEqual);
+      } else {
+        query += `${snakeCaseKey} = $${paramIndex}`;
+        values.push(value);
+      }
       paramIndex++;
     });
 
@@ -53,16 +63,28 @@ class User {
     const values = [];
     let paramIndex = 1;
 
+    if (!filter.status) {
+      filter.status = { notEqual: 'deleted' };
+    }
+
     Object.entries(filter).forEach(([key, value], index) => {
       const snakeCaseKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
       if (index > 0) {
         baseQuery += ' AND ';
         countQuery += ' AND ';
       }
-      const condition = `${snakeCaseKey} = $${paramIndex}`;
-      baseQuery += condition;
-      countQuery += condition;
-      values.push(value);
+      
+      if (typeof value === 'object' && value.notEqual !== undefined) {
+        const condition = `${snakeCaseKey} <> $${paramIndex}`;
+        baseQuery += condition;
+        countQuery += condition;
+        values.push(value.notEqual);
+      } else {
+        const condition = `${snakeCaseKey} = $${paramIndex}`;
+        baseQuery += condition;
+        countQuery += condition;
+        values.push(value);
+      }
       paramIndex++;
     });
 
@@ -115,24 +137,13 @@ class User {
       const user = await this.findById(id);
       if (!user) return null;
 
-      const query = 'DELETE FROM Users WHERE id = $1 RETURNING *';
-      const result = await this.executeQuery(query, [id]);
-      const deletedUser = result.rows[0];
+      const query = 'UPDATE Users SET status = $1 WHERE id = $2 RETURNING *';
+      const result = await this.executeQuery(query, ['deleted', id]);
+      const softDeletedUser = result.rows[0];
 
-      if (deletedUser && deletedUser.avatar_url) {
-        try {
-          const { deleteFromFirebase } = await import(
-            '../utils/uploadHandler.js'
-          );
-          await deleteFromFirebase(deletedUser.avatar_url);
-        } catch (error) {
-          console.error(`Error deleting avatar for user ${id}:`, error);
-        }
-      }
-
-      return deletedUser;
+      return softDeletedUser;
     } catch (error) {
-      console.error(`Error deleting user ${id}:`, error);
+      console.error(`Error soft-deleting user ${id}:`, error);
       throw error;
     }
   }
