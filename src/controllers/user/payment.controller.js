@@ -16,6 +16,7 @@ import {
   createStripeCheckoutSession,
 } from '../../services/payment.service.js';
 import logger from '../../utils/logger.js';
+import { trackTourBooking } from '../../services/history.service.js';
 
 export const createPayment = async (req, res) => {
   try {
@@ -312,6 +313,12 @@ export const vnpayIPN = async (req, res) => {
       await Invoice.create(invoiceData);
     }
 
+    if (booking.user_id && booking.tour_id) {
+      trackTourBooking(booking.user_id, booking.tour_id).catch(error => {
+        logger.error(`Error tracking tour booking: ${error.message}`);
+      });
+    }
+
     logger.info(
       `IPN confirmed payment for booking ${checkout.booking_id}, transaction: ${txnRef}`
     );
@@ -418,6 +425,12 @@ export const stripeWebhook = async (req, res) => {
           await Invoice.create(invoiceData);
         }
 
+        if (booking.user_id && booking.tour_id) {
+          trackTourBooking(booking.user_id, booking.tour_id).catch(error => {
+            logger.error(`Error tracking tour booking: ${error.message}`);
+          });
+        }
+
         logger.info(
           `Webhook confirmed Stripe payment for booking ${checkout.booking_id}`
         );
@@ -474,6 +487,12 @@ export const stripeWebhook = async (req, res) => {
           };
 
           await Invoice.create(invoiceData);
+        }
+
+        if (booking.user_id && booking.tour_id) {
+          trackTourBooking(booking.user_id, booking.tour_id).catch(error => {
+            logger.error(`Error tracking tour booking: ${error.message}`);
+          });
         }
 
         logger.info(

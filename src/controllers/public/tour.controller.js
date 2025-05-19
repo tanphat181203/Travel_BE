@@ -1,6 +1,7 @@
 import Tour from '../../models/Tour.js';
 import Departure from '../../models/Departure.js';
 import TourService from '../../services/tour.service.js';
+import { trackTourView } from '../../services/history.service.js';
 import {
   getPaginationParams,
   createPaginationMetadata,
@@ -27,6 +28,12 @@ export const getTourById = async (req, res, next) => {
     }));
 
     tour.departures = formattedDepartures;
+    
+    if (req.userId && req.user.role == 'user') {
+      trackTourView(req.userId, tourId).catch(error => {
+        console.error('Error tracking tour view:', error);
+      });
+    }
 
     return res.status(200).json(tour);
   } catch (error) {

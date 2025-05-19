@@ -1,6 +1,7 @@
 import express from 'express';
 import * as tourController from '../../controllers/public/tour.controller.js';
 import requestLogger from './../../middlewares/requestLogger.js';
+import { optionalAuthenticateJWT } from '../../middlewares/auth.js';
 
 const router = express.Router();
 
@@ -368,6 +369,6 @@ router.get('/search-ranges', requestLogger, tourController.getSearchRanges);
  *       500:
  *         description: Server error
  */
-router.get('/:tourId', requestLogger, tourController.getTourById);
+router.get('/:tourId', optionalAuthenticateJWT, requestLogger, tourController.getTourById);
 
 export default router;

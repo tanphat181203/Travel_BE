@@ -1,6 +1,7 @@
 import Booking from '../../models/Booking.js';
 import Checkout from '../../models/Checkout.js';
 import Invoice from '../../models/Invoice.js';
+import { trackTourBooking } from '../../services/history.service.js';
 import logger from '../../utils/logger.js';
 import {
   getPaginationParams,
@@ -144,6 +145,12 @@ export const confirmPayment = async (req, res) => {
       };
 
       await Invoice.create(invoiceData);
+    }
+
+    if (booking.user_id && booking.tour_id) {
+      trackTourBooking(booking.user_id, booking.tour_id).catch(error => {
+        logger.error(`Error tracking tour booking: ${error.message}`);
+      });
     }
 
     logger.info(

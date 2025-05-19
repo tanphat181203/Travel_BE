@@ -51,6 +51,42 @@ export const authenticateJWT = (req, res, next) => {
   }
 };
 
+export const optionalAuthenticateJWT = (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader) {
+      return next();
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    if (!token) {
+      return next();
+    }
+
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      
+      req.user = {
+        id: decoded.userId,
+        role: decoded.role,
+        name: decoded.name,
+        status: decoded.status,
+      };
+      req.userId = decoded.userId;
+      req.role = decoded.role;
+    } catch (tokenError) {
+      logger.debug(`Optional auth failed: ${tokenError.message}`);
+    }
+    
+    next();
+  } catch (error) {
+    logger.error(`Error in optional authentication: ${error.message}`);
+    next();
+  }
+};
+
 export const requireAdmin = (req, res, next) => {
   if (req.role !== 'admin') {
     return res
@@ -68,14 +104,12 @@ export const requireSeller = async (req, res, next) => {
         .json({ message: 'Access denied. Seller privileges required.' });
     }
 
-    // Skip subscription check for authentication and subscription-related routes
     const skipSubscriptionCheck = [
       '/api/seller/auth',
       '/api/seller/subscriptions',
       '/api/seller/profile',
     ];
 
-    // Check if the current path should skip subscription check
     const shouldSkip = skipSubscriptionCheck.some((path) =>
       req.originalUrl.startsWith(path)
     );
@@ -84,7 +118,6 @@ export const requireSeller = async (req, res, next) => {
       return next();
     }
 
-    // Check if seller has an active subscription
     const activeSubscription =
       await SellerSubscription.findActiveSubscriptionBySellerId(req.userId);
 
@@ -100,7 +133,6 @@ export const requireSeller = async (req, res, next) => {
       });
     }
 
-    // Add subscription info to request for potential use in controllers
     req.subscription = activeSubscription;
 
     next();
@@ -119,11 +151,6 @@ export const requireUser = (req, res, next) => {
   next();
 };
 
-/**
- * Middleware to check if a seller has an active subscription
- * This middleware doesn't block access but adds subscription status to the request
- * Controllers can use this information to customize their response
- */
 export const checkSellerSubscription = async (req, res, next) => {
   try {
     if (req.role !== 'seller') {
@@ -132,11 +159,9 @@ export const checkSellerSubscription = async (req, res, next) => {
         .json({ message: 'Access denied. Seller privileges required.' });
     }
 
-    // Check if seller has an active subscription
     const activeSubscription =
       await SellerSubscription.findActiveSubscriptionBySellerId(req.userId);
 
-    // Add subscription info to request for use in controllers
     req.hasActiveSubscription = !!activeSubscription;
     if (activeSubscription) {
       req.subscription = activeSubscription;
