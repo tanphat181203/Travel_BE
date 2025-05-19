@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS Users (
     avatar_url VARCHAR(255),
     phone_number VARCHAR(20) UNIQUE,
     address VARCHAR(255),
-    status VARCHAR(20) DEFAULT 'pending_verification'
+    status VARCHAR(20) DEFAULT 'pending_verification',
+    seller_description TEXT
 );
 
 -- 2. SubscriptionPackage

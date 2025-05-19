@@ -20,6 +20,7 @@ export const getAllSellers = async (req, res, next) => {
       avatar_url: seller.avatar_url,
       phone_number: seller.phone_number,
       address: seller.address,
+      seller_description: seller.seller_description,
     }));
 
     const pagination = createPaginationMetadata(page, limit, totalItems);

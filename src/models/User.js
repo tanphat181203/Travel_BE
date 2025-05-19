@@ -175,6 +175,18 @@ class User {
     return result.rows[0];
   }
 
+  static async updateSellerDescription(sellerId, description) {
+    const query = `
+      UPDATE Users
+      SET seller_description = $1
+      WHERE id = $2 AND role = 'seller'
+      RETURNING *
+    `;
+    
+    const result = await this.executeQuery(query, [description, sellerId]);
+    return result.rows[0];
+  }
+
   static async getUserStats(userId) {
     const query = `
       SELECT

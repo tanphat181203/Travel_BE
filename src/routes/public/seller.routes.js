@@ -51,6 +51,10 @@ const router = express.Router();
  *                       address:
  *                         type: string
  *                         nullable: true
+ *                       seller_description:
+ *                         type: string
+ *                         nullable: true
+ *                         description: Detailed description of the seller and their services
  *                 pagination:
  *                   type: object
  *                   properties:

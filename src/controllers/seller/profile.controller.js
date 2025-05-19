@@ -15,6 +15,7 @@ export const getSellerProfile = async (req, res, next) => {
       phone_number: seller.phone_number,
       address: seller.address,
       status: seller.status,
+      seller_description: seller.seller_description,
       hasActiveSubscription: req.hasActiveSubscription || false,
     };
 
@@ -37,12 +38,13 @@ export const updateSellerProfile = async (req, res, next) => {
     const seller = await User.findById(req.userId);
     if (!seller) return res.status(404).json({ message: 'Seller not found' });
 
-    const { name, phone_number, address } = req.body;
+    const { name, phone_number, address, seller_description } = req.body;
     const updates = {};
 
     if (name) updates.name = name;
     if (phone_number) updates.phone_number = phone_number;
     if (address) updates.address = address;
+    if (seller_description !== undefined) updates.seller_description = seller_description;
 
     if (req.file) {
       try {
@@ -66,6 +68,7 @@ export const updateSellerProfile = async (req, res, next) => {
       avatar_url: updates.avatar_url || updatedSeller.avatar_url,
       phone_number: updates.phone_number || updatedSeller.phone_number,
       address: updates.address || updatedSeller.address,
+      seller_description: updates.seller_description !== undefined ? updates.seller_description : updatedSeller.seller_description,
       status: updatedSeller.status,
     };
 

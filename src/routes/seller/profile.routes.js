@@ -46,6 +46,10 @@ const router = express.Router();
  *                 address:
  *                   type: string
  *                   nullable: true
+ *                 seller_description:
+ *                   type: string
+ *                   nullable: true
+ *                   description: Detailed description of the seller and their services
  *                 status:
  *                   type: string
  *                   description: Account status (pending_verification, active, suspended)
@@ -86,6 +90,9 @@ router.get(
  *                 type: string
  *               address:
  *                 type: string
+ *               seller_description:
+ *                 type: string
+ *                 description: Detailed description of the seller and their services
  *               avatar:
  *                 type: string
  *                 format: binary
@@ -116,6 +123,10 @@ router.get(
  *                 address:
  *                   type: string
  *                   nullable: true
+ *                 seller_description:
+ *                   type: string
+ *                   nullable: true
+ *                   description: Detailed description of the seller and their services
  *                 status:
  *                   type: string
  *                   description: Account status (pending_verification, active, suspended)
