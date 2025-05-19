@@ -29,7 +29,7 @@ export const getTourById = async (req, res, next) => {
 
     tour.departures = formattedDepartures;
     
-    if (req.userId && req.user.role == 'user') {
+    if (req.userId && req.user.role == 'user' && req.user.status == 'active') {
       trackTourView(req.userId, tourId).catch(error => {
         console.error('Error tracking tour view:', error);
       });

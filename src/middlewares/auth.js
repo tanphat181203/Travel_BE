@@ -32,6 +32,13 @@ export const authenticateJWT = (req, res, next) => {
     req.userId = decoded.userId;
     req.role = decoded.role;
 
+    if (decoded.status === 'suspended') {
+      return res.status(403).json({ 
+        message: 'Access denied. Your account has been suspended.',
+        code: 'ACCOUNT_SUSPENDED'
+      });
+    }
+
     next();
   } catch (error) {
     if (error.name === 'TokenExpiredError') {

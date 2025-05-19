@@ -1,3 +1,11 @@
+-- 0. UserStatus
+-- CREATE TYPE user_status AS ENUM (
+--   'pending_verification',
+--   'active',
+--   'suspended',
+--   'deleted'
+-- );
+
 -- 1. Users
 CREATE TABLE IF NOT EXISTS Users (
     id SERIAL PRIMARY KEY,
@@ -12,7 +20,7 @@ CREATE TABLE IF NOT EXISTS Users (
     avatar_url VARCHAR(255),
     phone_number VARCHAR(20) UNIQUE,
     address VARCHAR(255),
-    status VARCHAR(20) DEFAULT 'pending_verification',
+    status user_status DEFAULT 'pending_verification',
     seller_description TEXT
 );
 
@@ -186,7 +194,7 @@ CREATE TABLE IF NOT EXISTS SubscriptionInvoice (
     transaction_id VARCHAR(255)
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON Users(email);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON Users(email) WHERE status <> 'deleted';
 CREATE INDEX IF NOT EXISTS idx_users_role ON Users(role);
 CREATE INDEX IF NOT EXISTS idx_users_status ON Users(status);
 CREATE INDEX IF NOT EXISTS idx_users_refresh_token ON Users(refresh_token);
