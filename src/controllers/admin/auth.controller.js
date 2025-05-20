@@ -56,6 +56,10 @@ export const changeAdminPassword = async (req, res, next) => {
     const { id } = req.userId;
     const { newPassword } = req.body;
 
+    if (!newPassword || typeof newPassword !== 'string' || newPassword.trim() === '') {
+      return res.status(400).json({ message: 'Valid new password is required' });
+    }
+
     if (req.role !== 'admin') {
       return res
         .status(403)

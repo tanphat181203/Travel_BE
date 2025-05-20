@@ -165,6 +165,10 @@ export const resetSellerPassword = async (req, res, next) => {
     const { token } = req.params;
     const { password } = req.body;
 
+    if (!password || typeof password !== 'string' || password.trim() === '') {
+      return res.status(400).json({ message: 'Valid password is required' });
+    }
+
     const user = await User.findOne({
       resetPasswordToken: token,
     });
@@ -195,6 +199,10 @@ export const resetSellerPassword = async (req, res, next) => {
 export const changeSellerPassword = async (req, res, next) => {
   try {
     const { password, newPassword } = req.body;
+
+    if (!newPassword || typeof newPassword !== 'string' || newPassword.trim() === '') {
+      return res.status(400).json({ message: 'Valid new password is required' });
+    }
 
     const user = await User.findById(req.userId);
 

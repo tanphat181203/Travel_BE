@@ -169,9 +169,9 @@ router.post(
  *           schema:
  *             type: object
  *             required:
- *               - newPassword
+ *               - password
  *             properties:
- *               newPassword:
+ *               password:
  *                 type: string
  *                 format: password
  *                 minLength: 8
@@ -206,10 +206,10 @@ router.post(
  *           schema:
  *             type: object
  *             required:
- *               - currentPassword
+ *               - password
  *               - newPassword
  *             properties:
- *               currentPassword:
+ *               password:
  *                 type: string
  *                 format: password
  *               newPassword:

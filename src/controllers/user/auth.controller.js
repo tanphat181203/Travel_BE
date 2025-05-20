@@ -149,6 +149,10 @@ export const resetPassword = async (req, res, next) => {
     const { token } = req.params;
     const { password } = req.body;
 
+    if (!password || typeof password !== 'string' || password.trim() === '') {
+      return res.status(400).json({ message: 'Valid password is required' });
+    }
+
     const user = await User.findOne({
       resetPasswordToken: token,
     });
@@ -189,6 +193,11 @@ export const verifyEmail = async (req, res, next) => {
 export const changePassword = async (req, res, next) => {
   try {
     const { oldPassword, newPassword } = req.body;
+
+    if (!newPassword || typeof newPassword !== 'string' || newPassword.trim() === '') {
+      return res.status(400).json({ message: 'Valid new password is required' });
+    }
+
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
