@@ -22,6 +22,9 @@ export const listSellers = async (req, res, next) => {
       phone_number: seller.phone_number,
       address: seller.address,
       status: seller.status,
+      role: seller.role,
+      seller_description: seller.seller_description,
+      created_at: seller.created_at,
     }));
 
     const pagination = createPaginationMetadata(page, limit, totalItems);
@@ -56,6 +59,9 @@ export const getSellerById = async (req, res, next) => {
       phone_number: seller.phone_number,
       address: seller.address,
       status: seller.status,
+      role: seller.role,
+      seller_description: seller.seller_description,
+      created_at: seller.created_at,
     };
 
     res.json(sanitizedSeller);

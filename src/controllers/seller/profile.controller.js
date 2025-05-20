@@ -16,6 +16,7 @@ export const getSellerProfile = async (req, res, next) => {
       address: seller.address,
       status: seller.status,
       seller_description: seller.seller_description,
+      created_at: seller.created_at,
       hasActiveSubscription: req.hasActiveSubscription || false,
     };
 
@@ -70,6 +71,7 @@ export const updateSellerProfile = async (req, res, next) => {
       address: updates.address || updatedSeller.address,
       seller_description: updates.seller_description !== undefined ? updates.seller_description : updatedSeller.seller_description,
       status: updatedSeller.status,
+      created_at: updatedSeller.created_at,
     };
 
     res.json(sanitizedSeller);

@@ -21,7 +21,8 @@ CREATE TABLE IF NOT EXISTS Users (
     phone_number VARCHAR(20) UNIQUE,
     address VARCHAR(255),
     status user_status DEFAULT 'pending_verification',
-    seller_description TEXT
+    seller_description TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 2. SubscriptionPackage

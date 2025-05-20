@@ -17,6 +17,7 @@ export const getUserProfile = async (req, res, next) => {
       phone_number: user.phone_number,
       address: user.address,
       status: user.status,
+      created_at: user.created_at,
       total_bookings: parseInt(userStats.total_bookings) || 0,
       total_reviews: parseInt(userStats.total_reviews) || 0
     };
@@ -60,6 +61,7 @@ export const updateUserProfile = async (req, res, next) => {
       phone_number: updates.phone_number || user.phone_number,
       address: updates.address || user.address,
       status: user.status,
+      created_at: user.created_at,
     };
 
     res.json({
