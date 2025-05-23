@@ -52,10 +52,13 @@ export const loginUser = async (req, res, next) => {
   try {
     const { email, password } = req.body;
     const user = await User.findByEmail(email);
-    if (!user || user.status === 'pending_verification')
+    if (!user || user.status === 'pending_verification' || user.role !== 'user')
       return res
         .status(401)
-        .json({ message: 'Invalid credentials or email not verified' });
+        .json({
+          message:
+            'Invalid credentials, email not verified, or not a user account',
+        });
 
     const isMatch = await comparePassword(password, user.password);
     if (!isMatch)
