@@ -180,11 +180,130 @@ router.get('/vnpay-ipn', requestLogger, paymentController.vnpayIPN);
  *       400:
  *         description: Error processing webhook
  */
-// Special route for Stripe webhooks - needs raw body for signature verification
 router.post(
   '/stripe-webhook',
   express.raw({ type: 'application/json' }),
   paymentController.stripeWebhook
+);
+
+/**
+ * @swagger
+ * /user/payments/mobile/create:
+ *   post:
+ *     tags:
+ *       - User - Payment Management
+ *     summary: Create mobile Stripe payment for tour booking
+ *     description: Create payment intent, customer and ephemeral key for Stripe Mobile SDK
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - booking_id
+ *             properties:
+ *               booking_id:
+ *                 type: integer
+ *                 description: ID of the booking to pay for
+ *     responses:
+ *       200:
+ *         description: Mobile payment created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 clientSecret:
+ *                   type: string
+ *                   description: Payment intent client secret for Stripe Mobile SDK
+ *                   example: "pi_xxxxxxxxxxxxxxxx_secret_yyyyyyyyyyyyyy"
+ *                 ephemeralKey:
+ *                   type: string
+ *                   description: Ephemeral key secret for Stripe Mobile SDK
+ *                   example: "ek_xxxxxxxxxxxxxxxxxxxxxxx"
+ *                 customerId:
+ *                   type: string
+ *                   description: Stripe customer ID
+ *                   example: "cus_xxxxxxxxxxxxxx"
+ *                 checkout_id:
+ *                   type: integer
+ *                   description: Internal checkout record ID
+ *                 amount:
+ *                   type: number
+ *                   description: Payment amount in VND
+ *       400:
+ *         description: Invalid request or booking not available for payment
+ *       403:
+ *         description: Unauthorized access to booking
+ *       404:
+ *         description: Booking or user not found
+ *       500:
+ *         description: Server error
+ */
+router.post(
+  '/mobile/create',
+  authenticateJWT,
+  requireUser,
+  requestLogger,
+  paymentController.createMobilePayment
+);
+
+/**
+ * @swagger
+ * /user/payments/mobile/confirm:
+ *   post:
+ *     tags:
+ *       - User - Payment Management
+ *     summary: Confirm mobile Stripe payment
+ *     description: Confirm payment completion from mobile app
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - payment_intent_id
+ *             properties:
+ *               payment_intent_id:
+ *                 type: string
+ *                 description: Stripe payment intent ID
+ *     responses:
+ *       200:
+ *         description: Payment confirmed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 payment_status:
+ *                   type: string
+ *                 booking_status:
+ *                   type: string
+ *                 booking_id:
+ *                   type: integer
+ *       400:
+ *         description: Payment not successful or invalid request
+ *       403:
+ *         description: Unauthorized access
+ *       404:
+ *         description: Payment intent, checkout, or booking not found
+ *       500:
+ *         description: Server error
+ */
+router.post(
+  '/mobile/confirm',
+  authenticateJWT,
+  requireUser,
+  requestLogger,
+  paymentController.confirmMobilePayment
 );
 
 export default router;

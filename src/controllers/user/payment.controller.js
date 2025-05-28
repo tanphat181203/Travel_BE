@@ -4,6 +4,7 @@ dotenv.config();
 import Booking from '../../models/Booking.js';
 import Checkout from '../../models/Checkout.js';
 import Invoice from '../../models/Invoice.js';
+import User from '../../models/User.js';
 import SellerSubscription from '../../models/SellerSubscription.js';
 import SubscriptionInvoice from '../../models/SubscriptionInvoice.js';
 import {
@@ -12,8 +13,12 @@ import {
   verifyIpnCall,
   getIpnResponse,
   getErrorResponse,
+  retrievePaymentIntent,
   constructStripeEvent,
   createStripeCheckoutSession,
+  createOrGetStripeCustomer,
+  createEphemeralKey,
+  createMobilePaymentIntent,
 } from '../../services/payment.service.js';
 import logger from '../../utils/logger.js';
 import { trackTourBooking } from '../../services/history.service.js';
@@ -552,5 +557,257 @@ export const stripeWebhook = async (req, res) => {
   } catch (error) {
     logger.error(`Error processing Stripe webhook: ${error.message}`);
     res.status(400).json({ error: error.message });
+  }
+};
+
+export const createMobilePayment = async (req, res) => {
+  try {
+    const { booking_id } = req.body;
+    const user_id = req.user.id;
+
+    if (!booking_id) {
+      return res.status(400).json({ message: 'Booking ID is required' });
+    }
+
+    const booking = await Booking.findById(booking_id);
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    if (booking.user_id !== user_id) {
+      return res
+        .status(403)
+        .json({ message: 'Unauthorized access to booking' });
+    }
+
+    if (booking.booking_status !== 'pending') {
+      return res.status(400).json({
+        message: 'Booking is not available for payment',
+        current_status: booking.booking_status,
+      });
+    }
+
+    const existingCheckouts = await Checkout.findByBookingId(booking_id);
+    const existingCheckout =
+      existingCheckouts && existingCheckouts.length > 0
+        ? existingCheckouts.find(
+            (c) =>
+              c.payment_method === 'stripe_mobile' &&
+              c.payment_status !== 'completed'
+          )
+        : null;
+
+    if (
+      existingCheckouts &&
+      existingCheckouts.some((c) => c.payment_status === 'completed')
+    ) {
+      return res.status(400).json({
+        message: 'Payment already completed for this booking',
+      });
+    }
+
+    const user = await User.findById(user_id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const customer = await createOrGetStripeCustomer(
+      user_id,
+      user.email,
+      user.name
+    );
+
+    const ephemeralKey = await createEphemeralKey(customer.id);
+
+    const paymentIntent = await createMobilePaymentIntent(
+      booking.total_price,
+      booking_id,
+      customer.id,
+      {
+        tour_title: booking.tour_title,
+        user_email: user.email,
+      }
+    );
+
+    let checkout;
+    if (existingCheckout) {
+      await Checkout.updateStatus(
+        existingCheckout.checkout_id,
+        'pending',
+        paymentIntent.id
+      );
+      checkout = await Checkout.findById(existingCheckout.checkout_id);
+    } else {
+      const checkoutData = {
+        booking_id,
+        payment_method: 'stripe_mobile',
+        amount: booking.total_price,
+        payment_status: 'pending',
+        transaction_id: paymentIntent.id,
+      };
+      checkout = await Checkout.create(checkoutData);
+    }
+
+    logger.info(
+      `Created mobile Stripe payment for booking ${booking_id}, checkout ID: ${checkout.checkout_id}, payment intent: ${paymentIntent.id}`
+    );
+
+    res.status(200).json({
+      clientSecret: paymentIntent.client_secret,
+      ephemeralKey: ephemeralKey.secret,
+      customerId: customer.id,
+      checkout_id: checkout.checkout_id,
+      amount: booking.total_price,
+    });
+  } catch (error) {
+    logger.error(`Error creating mobile payment: ${error.message}`);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+export const confirmMobilePayment = async (req, res) => {
+  try {
+    const { payment_intent_id } = req.body;
+    const user_id = req.user.id;
+
+    if (!payment_intent_id) {
+      return res.status(400).json({ message: 'Payment intent ID is required' });
+    }
+
+    const paymentIntent = await retrievePaymentIntent(payment_intent_id);
+
+    if (!paymentIntent) {
+      return res.status(404).json({ message: 'Payment intent not found' });
+    }
+
+    const checkout = await Checkout.findByTransactionId(payment_intent_id);
+    if (!checkout) {
+      return res.status(404).json({ message: 'Checkout record not found' });
+    }
+
+    const booking = await Booking.findById(checkout.booking_id);
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    if (booking.user_id !== user_id) {
+      return res
+        .status(403)
+        .json({ message: 'Unauthorized access to booking' });
+    }
+
+    if (checkout.payment_status === 'completed') {
+      return res.status(200).json({
+        message: 'Payment already confirmed',
+        payment_status: 'completed',
+        booking_status: booking.booking_status,
+        booking_id: checkout.booking_id,
+      });
+    }
+
+    if (paymentIntent.status === 'succeeded') {
+      await Checkout.updateStatus(
+        checkout.checkout_id,
+        'completed',
+        payment_intent_id
+      );
+
+      await Booking.updateStatus(checkout.booking_id, 'confirmed');
+
+      const existingInvoice = await Invoice.findByBookingId(
+        checkout.booking_id
+      );
+
+      if (!existingInvoice) {
+        const invoiceData = {
+          booking_id: checkout.booking_id,
+          amount_due: checkout.amount,
+          details: JSON.stringify({
+            payment_method: 'stripe_mobile',
+            transaction_id: payment_intent_id,
+            payment_date: new Date().toISOString(),
+            tour_title: booking.tour_title,
+            departure_date: booking.start_date,
+            num_adults: booking.num_adults,
+            num_children_120_140: booking.num_children_120_140,
+            num_children_100_120: booking.num_children_100_120,
+            original_price: booking.original_price,
+            discount: booking.discount,
+            promotion_id: booking.promotion_id,
+            contact_info: booking.contact_info,
+            passengers: booking.passengers,
+            order_notes: booking.order_notes,
+          }),
+        };
+
+        const invoice = await Invoice.create(invoiceData);
+        logger.info(
+          `Created invoice ${invoice.invoice_id} for booking ${checkout.booking_id}`
+        );
+      }
+
+      if (booking.user_id && booking.tour_id) {
+        trackTourBooking(booking.user_id, booking.tour_id).catch((error) => {
+          logger.error(`Error tracking tour booking: ${error.message}`);
+        });
+      }
+
+      logger.info(
+        `Mobile payment confirmed for booking ${checkout.booking_id}, payment intent: ${payment_intent_id}`
+      );
+
+      res.status(200).json({
+        message: 'Payment confirmed successfully',
+        payment_status: 'completed',
+        booking_status: 'confirmed',
+        booking_id: checkout.booking_id,
+        checkout_id: checkout.checkout_id,
+      });
+    } else if (paymentIntent.status === 'requires_payment_method') {
+      await Checkout.updateStatus(
+        checkout.checkout_id,
+        'failed',
+        payment_intent_id
+      );
+
+      logger.warn(
+        `Mobile payment requires payment method for booking ${checkout.booking_id}, payment intent: ${payment_intent_id}`
+      );
+
+      res.status(400).json({
+        message: 'Payment requires a valid payment method',
+        payment_status: paymentIntent.status,
+        booking_id: checkout.booking_id,
+      });
+    } else if (paymentIntent.status === 'canceled') {
+      await Checkout.updateStatus(
+        checkout.checkout_id,
+        'cancelled',
+        payment_intent_id
+      );
+
+      logger.warn(
+        `Mobile payment was canceled for booking ${checkout.booking_id}, payment intent: ${payment_intent_id}`
+      );
+
+      res.status(400).json({
+        message: 'Payment was canceled',
+        payment_status: paymentIntent.status,
+        booking_id: checkout.booking_id,
+      });
+    } else {
+      logger.warn(
+        `Mobile payment not succeeded: ${paymentIntent.status} for booking ${checkout.booking_id}, payment intent: ${payment_intent_id}`
+      );
+
+      res.status(400).json({
+        message: `Payment status: ${paymentIntent.status}`,
+        payment_status: paymentIntent.status,
+        booking_id: checkout.booking_id,
+      });
+    }
+  } catch (error) {
+    logger.error(`Error confirming mobile payment: ${error.message}`);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };

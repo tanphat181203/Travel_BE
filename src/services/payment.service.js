@@ -223,3 +223,88 @@ export const createStripeCheckoutSession = async (
     throw error;
   }
 };
+
+export const createOrGetStripeCustomer = async (
+  userId,
+  userEmail,
+  userName
+) => {
+  try {
+    const existingCustomers = await stripe.customers.list({
+      email: userEmail,
+      limit: 1,
+    });
+
+    if (existingCustomers.data.length > 0) {
+      const customer = existingCustomers.data[0];
+      logger.info(`Found existing Stripe customer: ${customer.id}`);
+      return customer;
+    }
+
+    const customer = await stripe.customers.create({
+      email: userEmail,
+      name: userName,
+      metadata: {
+        user_id: userId.toString(),
+      },
+    });
+
+    logger.info(
+      `Created new Stripe customer: ${customer.id} for user: ${userId}`
+    );
+    return customer;
+  } catch (error) {
+    logger.error(`Error creating/getting Stripe customer: ${error.message}`);
+    throw error;
+  }
+};
+
+export const createEphemeralKey = async (
+  customerId,
+  apiVersion = '2023-10-16'
+) => {
+  try {
+    const ephemeralKey = await stripe.ephemeralKeys.create(
+      { customer: customerId },
+      { apiVersion }
+    );
+
+    logger.info(`Created ephemeral key for customer: ${customerId}`);
+    return ephemeralKey;
+  } catch (error) {
+    logger.error(`Error creating ephemeral key: ${error.message}`);
+    throw error;
+  }
+};
+
+export const createMobilePaymentIntent = async (
+  amount,
+  bookingId,
+  customerId,
+  metadata = {}
+) => {
+  try {
+    const amountInVND = Math.round(amount);
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amountInVND,
+      currency: 'vnd',
+      customer: customerId,
+      metadata: {
+        booking_id: bookingId,
+        ...metadata,
+      },
+      automatic_payment_methods: {
+        enabled: true,
+      },
+    });
+
+    logger.info(
+      `Created mobile payment intent for booking: ${bookingId}, id: ${paymentIntent.id}`
+    );
+    return paymentIntent;
+  } catch (error) {
+    logger.error(`Error creating mobile payment intent: ${error.message}`);
+    throw error;
+  }
+};
