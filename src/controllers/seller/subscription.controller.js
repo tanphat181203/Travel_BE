@@ -199,8 +199,8 @@ export const createSubscriptionPayment = async (req, res) => {
         subscriptionPackage.price,
         subscription.subscription_id,
         orderInfo,
-        `${process.env.CLIENT_URL}/seller/subscription/success?payment_method=stripe&subscription_id=${subscription.subscription_id}`,
-        `${process.env.CLIENT_URL}/seller/subscription/failed?payment_method=stripe&reason=cancelled&subscription_id=${subscription.subscription_id}`,
+        `${process.env.SELLER_URL}/subscription/success?payment_method=stripe&subscription_id=${subscription.subscription_id}`,
+        `${process.env.SELLER_URL}/subscription/failed?payment_method=stripe&reason=cancelled&subscription_id=${subscription.subscription_id}`,
         true // Set isSubscription to true
       );
 
@@ -271,14 +271,14 @@ export const vnpayReturn = async (req, res) => {
         `VNPay return verification failed: ${JSON.stringify(req.query)}`
       );
       return res.redirect(
-        `${process.env.CLIENT_URL}/seller/subscription/failed?payment_method=vnpay&reason=verification_failed`
+        `${process.env.SELLER_URL}/subscription/failed?payment_method=vnpay&reason=verification_failed`
       );
     }
 
     if (!verify.isSuccess) {
       logger.warn(`VNPay payment failed: ${JSON.stringify(req.query)}`);
       return res.redirect(
-        `${process.env.CLIENT_URL}/seller/subscription/failed?payment_method=vnpay&reason=payment_failed`
+        `${process.env.SELLER_URL}/subscription/failed?payment_method=vnpay&reason=payment_failed`
       );
     }
 
@@ -291,7 +291,7 @@ export const vnpayReturn = async (req, res) => {
     if (!invoice) {
       logger.error(`Invoice not found for transaction: ${txnRef}`);
       return res.redirect(
-        `${process.env.CLIENT_URL}/seller/subscription/failed?payment_method=vnpay&reason=invoice_not_found`
+        `${process.env.SELLER_URL}/subscription/failed?payment_method=vnpay&reason=invoice_not_found`
       );
     }
 
@@ -301,7 +301,7 @@ export const vnpayReturn = async (req, res) => {
         `Amount mismatch for transaction ${txnRef}: expected ${invoice.amount_due}, got ${amount}`
       );
       return res.redirect(
-        `${process.env.CLIENT_URL}/seller/subscription/failed?payment_method=vnpay&reason=amount_mismatch`
+        `${process.env.SELLER_URL}/subscription/failed?payment_method=vnpay&reason=amount_mismatch`
       );
     }
 
@@ -329,12 +329,12 @@ export const vnpayReturn = async (req, res) => {
     );
 
     return res.redirect(
-      `${process.env.CLIENT_URL}/seller/subscription/success?payment_method=vnpay&subscription_id=${invoice.subscription_id}`
+      `${process.env.SELLER_URL}/subscription/success?payment_method=vnpay&subscription_id=${invoice.subscription_id}`
     );
   } catch (error) {
     logger.error(`Error processing VNPay return: ${error.message}`);
     return res.redirect(
-      `${process.env.CLIENT_URL}/seller/subscription/failed?payment_method=vnpay&reason=server_error`
+      `${process.env.SELLER_URL}/subscription/failed?payment_method=vnpay&reason=server_error`
     );
   }
 };

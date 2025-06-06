@@ -184,13 +184,12 @@ export const createStripeCheckoutSession = async (
     const metadata = isSubscription
       ? { subscription_id: orderId }
       : { booking_id: orderId };
-
     const defaultSuccessUrl = isSubscription
-      ? `${process.env.CLIENT_URL}/seller/subscription/success?payment_method=stripe&subscription_id=${orderId}`
+      ? `${process.env.SELLER_URL}/subscription/success?payment_method=stripe&subscription_id=${orderId}`
       : `${process.env.CLIENT_URL}/payment/success?payment_method=stripe&booking_id=${orderId}`;
 
     const defaultCancelUrl = isSubscription
-      ? `${process.env.CLIENT_URL}/seller/subscription/failed?payment_method=stripe&reason=cancelled&subscription_id=${orderId}`
+      ? `${process.env.SELLER_URL}/subscription/failed?payment_method=stripe&reason=cancelled&subscription_id=${orderId}`
       : `${process.env.CLIENT_URL}/payment/failed?payment_method=stripe&reason=cancelled&booking_id=${orderId}`;
 
     const session = await stripe.checkout.sessions.create({
