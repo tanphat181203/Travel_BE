@@ -145,7 +145,7 @@ export const forgotPassword = async (req, res, next) => {
     await sendEmail(
       email,
       'Reset Your Password',
-      `Reset your password: ${process.env.BASE_URL}/api/user/auth/reset-password/${resetToken}`
+      `Reset your password: ${process.env.CLIENT_URL}/reset-password/${resetToken}`
     );
 
     res.json({ message: 'Password reset email sent' });
@@ -258,6 +258,64 @@ export const refreshToken = async (req, res, next) => {
 
     res.json({
       accessToken,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        avatar_url: user.avatar_url,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const googleUserInfo = async (req, res, next) => {
+  try {
+    const { access_token } = req.body;
+    
+    const response = await fetch(`https://www.googleapis.com/oauth2/v2/userinfo?access_token=${access_token}`);
+    const userInfo = await response.json();
+    
+    if (!response.ok) {
+      return res.status(400).json({ message: 'Invalid Google access token' });
+    }
+
+    let user = await User.findByEmail(userInfo.email);
+    
+    if (!user) {
+      user = await User.create({
+        google_id: userInfo.id,
+        email: userInfo.email,
+        name: userInfo.name,
+        role: 'user',
+        status: 'active',
+        avatar_url: userInfo.picture,
+      });
+    } else if (!user.google_id) {
+      if (user.role !== 'user') {
+        return res.status(400).json({ message: 'Cannot link Google account to non-user account' });
+      }
+      user = await User.findByIdAndUpdate(user.id, {
+        google_id: userInfo.id,
+        avatar_url: userInfo.picture,
+      });
+    }
+
+    const accessToken = generateToken({
+      id: user.id,
+      role: user.role,
+      name: user.name,
+      status: user.status,
+    });
+
+    const refreshToken = generateRefreshToken({ id: user.id });
+
+    await User.findByIdAndUpdate(user.id, { refreshToken });
+
+    res.json({
+      accessToken,
+      refreshToken,
       user: {
         id: user.id,
         name: user.name,

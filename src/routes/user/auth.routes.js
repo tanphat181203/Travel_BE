@@ -361,4 +361,78 @@ router.get('/verify-email/:token', requestLogger, authController.verifyEmail);
  */
 router.post('/refresh-token', requestLogger, authController.refreshToken);
 
+/**
+ * @swagger
+ * /user/auth/google-token:
+ *   post:
+ *     tags:
+ *       - User Authentication
+ *     summary: Authenticate with Google access token
+ *     description: Authenticate or register user using Google access token
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - access_token
+ *             properties:
+ *               access_token:
+ *                 type: string
+ *                 description: Google OAuth2 access token
+ *                 example: "ya29.a0AfH6SMC..."
+ *     responses:
+ *       200:
+ *         description: Authentication successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 accessToken:
+ *                   type: string
+ *                   description: JWT access token for authentication (short-lived)
+ *                 refreshToken:
+ *                   type: string
+ *                   description: JWT refresh token for obtaining new access tokens (long-lived)
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       example: 123
+ *                     name:
+ *                       type: string
+ *                       example: "John Doe"
+ *                     email:
+ *                       type: string
+ *                       format: email
+ *                       example: "john.doe@gmail.com"
+ *                     avatar_url:
+ *                       type: string
+ *                       example: "https://lh3.googleusercontent.com/..."
+ *       400:
+ *         description: Invalid Google access token or cannot link account
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Invalid Google access token"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
+ */
+router.post('/google-token', requestLogger, authController.googleUserInfo);
+
 export default router;
