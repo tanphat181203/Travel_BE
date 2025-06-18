@@ -96,30 +96,37 @@ export const googleLogin = passport.authenticate('google', {
 
 export const googleCallback = (req, res, next) => {
   passport.authenticate('google', { session: false }, async (err, user) => {
-    if (err || !user)
-      return res.status(400).json({ message: 'Google login failed' });
+    if (err || !user) {
+      return res.redirect(`${process.env.CLIENT_URL}/auth/callback?error=google_login_failed`);
+    }
 
-    const accessToken = generateToken({
-      id: user.id,
-      role: user.role,
-      name: user.name,
-      status: user.status,
-    });
-
-    const refreshToken = generateRefreshToken({ id: user.id });
-
-    await User.findByIdAndUpdate(user.id, { refreshToken });
-
-    res.json({
-      accessToken,
-      refreshToken,
-      user: {
+    try {
+      const accessToken = generateToken({
         id: user.id,
+        role: user.role,
         name: user.name,
-        email: user.email,
-        avatar_url: user.avatar_url,
-      },
-    });
+        status: user.status,
+      });
+
+      const refreshToken = generateRefreshToken({ id: user.id });
+
+      await User.findByIdAndUpdate(user.id, { refreshToken });
+
+      const params = new URLSearchParams({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        user: JSON.stringify({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          avatar_url: user.avatar_url,
+        })
+      });
+
+      res.redirect(`${process.env.CLIENT_URL}/auth/callback?${params.toString()}`);
+    } catch (error) {
+      res.redirect(`${process.env.CLIENT_URL}/auth/callback?error=server_error`);
+    }
   })(req, res, next);
 };
 
