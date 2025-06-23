@@ -559,8 +559,8 @@ router.put(
  *   delete:
  *     tags:
  *       - Seller - Tour Management
- *     summary: Delete tour
- *     description: Delete a tour and all its associated images from Firebase Storage (seller access only)
+ *     summary: Delete tour (soft delete)
+ *     description: Soft delete a tour by marking it as deleted (seller access only)
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -580,7 +580,7 @@ router.put(
  *               properties:
  *                 message:
  *                   type: string
- *                   example: Tour deleted successfully with all associated images
+ *                   example: Tour deleted successfully
  *       401:
  *         description: Unauthorized - not logged in
  *       403:
@@ -596,6 +596,139 @@ router.delete(
   requireSeller,
   requestLogger,
   tourController.deleteTour
+);
+
+/**
+ * @swagger
+ * /seller/tours/{id}/restore:
+ *   patch:
+ *     tags:
+ *       - Seller - Tour Management
+ *     summary: Restore deleted tour
+ *     description: Restore a previously deleted tour (seller access only)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Tour ID
+ *     responses:
+ *       200:
+ *         description: Tour restored successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Tour restored successfully
+ *                 tour:
+ *                   type: object
+ *                   properties:
+ *                     tour_id:
+ *                       type: integer
+ *                     title:
+ *                       type: string
+ *                     is_deleted:
+ *                       type: boolean
+ *                       enum: [false]
+ *                     deleted_at:
+ *                       type: null
+ *       400:
+ *         description: Tour is not deleted
+ *       401:
+ *         description: Unauthorized - not logged in
+ *       403:
+ *         description: Not authorized to restore this tour
+ *       404:
+ *         description: Tour not found or failed to restore
+ *       500:
+ *         description: Server error
+ */
+router.patch(
+  '/:id/restore',
+  authenticateJWT,
+  requireSeller,
+  requestLogger,
+  tourController.restoreTour
+);
+
+/**
+ * @swagger
+ * /seller/tours/deleted:
+ *   get:
+ *     tags:
+ *       - Seller - Tour Management
+ *     summary: List deleted tours
+ *     description: Get all deleted tours for the authenticated seller with pagination
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of items per page
+ *     responses:
+ *       200:
+ *         description: List of deleted tours
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 tours:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       tour_id:
+ *                         type: integer
+ *                       title:
+ *                         type: string
+ *                       is_deleted:
+ *                         type: boolean
+ *                         enum: [true]
+ *                       deleted_at:
+ *                         type: string
+ *                         format: date-time
+ *                       images:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     page:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *                     totalItems:
+ *                       type: integer
+ *                     totalPages:
+ *                       type: integer
+ *       401:
+ *         description: Unauthorized - not logged in
+ *       500:
+ *         description: Server error
+ */
+router.get(
+  '/deleted',
+  authenticateJWT,
+  requireSeller,
+  requestLogger,
+  tourController.getDeletedTours
 );
 
 /**

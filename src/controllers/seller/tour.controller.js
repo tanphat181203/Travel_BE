@@ -160,6 +160,75 @@ export const deleteTour = async (req, res, next) => {
   }
 };
 
+export const restoreTour = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const seller_id = req.userId;
+
+    const existingTour = await Tour.findByIdIncludingDeleted(id);
+
+    if (!existingTour) {
+      return res.status(404).json({ message: 'Tour not found' });
+    }
+
+    if (existingTour.seller_id !== seller_id) {
+      return res.status(403).json({
+        message: 'You are not authorized to restore this tour',
+      });
+    }
+
+    if (!existingTour.is_deleted) {
+      return res.status(400).json({
+        message: 'Tour is not deleted',
+      });
+    }
+
+    const restoredTour = await Tour.restore(id);
+    
+    if (!restoredTour) {
+      return res.status(404).json({
+        message: 'Failed to restore tour',
+      });
+    }
+
+    delete restoredTour.embedding;
+
+    return res.status(200).json({
+      message: 'Tour restored successfully',
+      tour: restoredTour,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getDeletedTours = async (req, res, next) => {
+  try {
+    const seller_id = req.userId;
+    const { page, limit, offset } = getPaginationParams(req.query);
+
+    const { tours, totalItems } = await Tour.findDeletedBySellerId(
+      seller_id,
+      limit,
+      offset
+    );
+
+    const sanitizedTours = tours.map((tour) => {
+      delete tour.embedding;
+      return tour;
+    });
+
+    const pagination = createPaginationMetadata(page, limit, totalItems);
+
+    return res.status(200).json({
+      tours: sanitizedTours,
+      pagination,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const searchTours = async (req, res, next) => {
   try {
     const seller_id = req.userId;

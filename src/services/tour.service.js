@@ -253,6 +253,7 @@ class TourService {
     `;
 
     conditions.push(`t.availability = true`);
+    conditions.push(`t.is_deleted = false`);
     conditions.push(`d.availability = true`);
 
     if (params.region !== undefined) {
@@ -437,11 +438,13 @@ class TourService {
 
   static async getNextAvailableDeparture(tourId) {
     const query = `
-      SELECT * FROM Departure
-      WHERE tour_id = $1
-        AND availability = true
-        AND start_date >= CURRENT_DATE
-      ORDER BY start_date
+      SELECT d.* FROM Departure d
+      JOIN Tour t ON d.tour_id = t.tour_id
+      WHERE d.tour_id = $1
+        AND d.availability = true
+        AND d.start_date >= CURRENT_DATE
+        AND t.is_deleted = false
+      ORDER BY d.start_date
       LIMIT 1
     `;
 

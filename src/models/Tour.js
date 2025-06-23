@@ -92,7 +92,7 @@ class Tour {
     const query = `
       UPDATE Tour
       SET ${setClause}
-      WHERE tour_id = $1
+      WHERE tour_id = $1 AND is_deleted = false
       RETURNING *
     `;
 
@@ -105,7 +105,7 @@ class Tour {
       SELECT t.*, u.name as seller_name 
       FROM Tour t
       JOIN Users u ON t.seller_id = u.id
-      WHERE t.tour_id = $1
+      WHERE t.tour_id = $1 AND t.is_deleted = false
     `;
     const tourResult = await pool.query(tourQuery, [tourId]);
     const tour = tourResult.rows[0];
@@ -125,7 +125,7 @@ class Tour {
   }
 
   static async findBySellerId(sellerId, limit, offset) {
-    const countQuery = 'SELECT COUNT(*) FROM Tour WHERE seller_id = $1';
+    const countQuery = 'SELECT COUNT(*) FROM Tour WHERE seller_id = $1 AND is_deleted = false';
     const countResult = await pool.query(countQuery, [sellerId]);
     const totalItems = parseInt(countResult.rows[0].count);
 
@@ -133,7 +133,7 @@ class Tour {
       SELECT t.*, u.name as seller_name 
       FROM Tour t
       JOIN Users u ON t.seller_id = u.id
-      WHERE t.seller_id = $1
+      WHERE t.seller_id = $1 AND t.is_deleted = false
     `;
 
     if (limit !== undefined && offset !== undefined) {
@@ -182,6 +182,38 @@ class Tour {
 
   static async delete(tourId) {
     try {
+      const query = `
+        UPDATE Tour
+        SET is_deleted = true, deleted_at = CURRENT_TIMESTAMP
+        WHERE tour_id = $1 AND is_deleted = false
+        RETURNING *
+      `;
+      const result = await pool.query(query, [tourId]);
+      return result.rows[0];
+    } catch (error) {
+      console.error(`Error soft deleting tour: tourId=${tourId}`, error);
+      throw error;
+    }
+  }
+
+  static async restore(tourId) {
+    try {
+      const query = `
+        UPDATE Tour
+        SET is_deleted = false, deleted_at = NULL
+        WHERE tour_id = $1 AND is_deleted = true
+        RETURNING *
+      `;
+      const result = await pool.query(query, [tourId]);
+      return result.rows[0];
+    } catch (error) {
+      console.error(`Error restoring tour: tourId=${tourId}`, error);
+      throw error;
+    }
+  }
+
+  static async hardDelete(tourId) {
+    try {
       const getImagesQuery = 'SELECT * FROM Images WHERE tour_id = $1';
       const imagesResult = await pool.query(getImagesQuery, [tourId]);
       const images = imagesResult.rows;
@@ -203,7 +235,7 @@ class Tour {
       const result = await pool.query(query, [tourId]);
       return result.rows[0];
     } catch (error) {
-      console.error(`Error deleting tour: tourId=${tourId}`, error);
+      console.error(`Error hard deleting tour: tourId=${tourId}`, error);
       throw error;
     }
   }
@@ -214,11 +246,13 @@ class Tour {
     const formattedDate = today.toISOString().split('T')[0];
 
     const query = `
-      SELECT * FROM Departure
-      WHERE tour_id = $1
-      AND start_date >= $2
-      AND availability = true
-      ORDER BY start_date ASC
+      SELECT d.* FROM Departure d
+      JOIN Tour t ON d.tour_id = t.tour_id
+      WHERE d.tour_id = $1
+      AND d.start_date >= $2
+      AND d.availability = true
+      AND t.is_deleted = false
+      ORDER BY d.start_date ASC
       LIMIT 1
     `;
 
@@ -236,14 +270,14 @@ class Tour {
 
     const countQuery = `
       SELECT COUNT(*) FROM Tour
-      WHERE embedding <=> $1 < 1.2
+      WHERE embedding <=> $1 < 1.2 AND is_deleted = false
     `;
     const countResult = await pool.query(countQuery, [embedding]);
     const totalItems = parseInt(countResult.rows[0].count);
 
     const searchQuery = `
       SELECT * FROM Tour
-      WHERE embedding <=> $1 < 1.2
+      WHERE embedding <=> $1 < 1.2 AND is_deleted = false
       ORDER BY embedding <=> $1
       LIMIT ${limit} OFFSET ${offset}
     `;
@@ -395,7 +429,7 @@ class Tour {
 
   static async getDepartureLocations() {
     const query =
-      'SELECT DISTINCT departure_location FROM Tour ORDER BY departure_location';
+      'SELECT DISTINCT departure_location FROM Tour WHERE is_deleted = false ORDER BY departure_location';
     const result = await pool.query(query);
     return result.rows.map((row) => row.departure_location);
   }
@@ -406,7 +440,7 @@ class Tour {
         DISTINCT departure_location,
         UNNEST(destination) as destination
       FROM Tour
-      WHERE availability = true
+      WHERE availability = true AND is_deleted = false
       ORDER BY departure_location, destination;
     `;
 
@@ -431,7 +465,7 @@ class Tour {
             COUNT(*) as total_tours,
             COUNT(*) FILTER (WHERE availability = true) as active_tours
           FROM Tour
-          WHERE seller_id = $1
+          WHERE seller_id = $1 AND is_deleted = false
         `;
         const toursResult = await client.query(toursQuery, [sellerId]);
 
@@ -442,7 +476,7 @@ class Tour {
             COUNT(*) FILTER (WHERE d.availability = true AND d.start_date >= CURRENT_DATE) as upcoming_departures
           FROM Departure d
           JOIN Tour t ON d.tour_id = t.tour_id
-          WHERE t.seller_id = $1
+          WHERE t.seller_id = $1 AND t.is_deleted = false
         `;
         const departuresResult = await client.query(departuresQuery, [
           sellerId,
@@ -457,7 +491,7 @@ class Tour {
           FROM Tour t
           JOIN Departure d ON t.tour_id = d.tour_id
           JOIN Booking b ON d.departure_id = b.departure_id
-          WHERE t.seller_id = $1
+          WHERE t.seller_id = $1 AND t.is_deleted = false
           GROUP BY t.tour_id, t.title
           ORDER BY booking_count DESC
           LIMIT 1
@@ -480,6 +514,65 @@ class Tour {
       }
     } catch (error) {
       console.error(`Error getting tour stats for seller ${sellerId}:`, error);
+      throw error;
+    }
+  }
+
+  static async findByIdIncludingDeleted(tourId) {
+    const tourQuery = `
+      SELECT t.*, u.name as seller_name 
+      FROM Tour t
+      JOIN Users u ON t.seller_id = u.id
+      WHERE t.tour_id = $1
+    `;
+    const tourResult = await pool.query(tourQuery, [tourId]);
+    return tourResult.rows[0];
+  }
+
+  static async findDeletedBySellerId(sellerId, limit, offset) {
+    try {
+      const countQuery = 'SELECT COUNT(*) FROM Tour WHERE seller_id = $1 AND is_deleted = true';
+      const countResult = await pool.query(countQuery, [sellerId]);
+      const totalItems = parseInt(countResult.rows[0].count);
+
+      const query = `
+        SELECT t.*, u.name as seller_name 
+        FROM Tour t
+        JOIN Users u ON t.seller_id = u.id
+        WHERE t.seller_id = $1 AND t.is_deleted = true
+        ORDER BY t.deleted_at DESC
+        LIMIT $2 OFFSET $3
+      `;
+
+      const result = await pool.query(query, [sellerId, limit, offset]);
+      const tours = result.rows;
+
+      if (tours.length === 0) return { tours: [], totalItems };
+
+      const tourIds = tours.map((tour) => tour.tour_id);
+      const imagesQuery = `
+        SELECT * FROM Images
+        WHERE tour_id = ANY($1)
+        ORDER BY tour_id, is_cover DESC, upload_date DESC
+      `;
+      const imagesResult = await pool.query(imagesQuery, [tourIds]);
+      const images = imagesResult.rows;
+
+      const imagesByTourId = {};
+      images.forEach((image) => {
+        if (!imagesByTourId[image.tour_id]) {
+          imagesByTourId[image.tour_id] = [];
+        }
+        imagesByTourId[image.tour_id].push(image);
+      });
+
+      for (const tour of tours) {
+        tour.images = imagesByTourId[tour.tour_id] || [];
+      }
+
+      return { tours, totalItems };
+    } catch (error) {
+      console.error(`Error finding deleted tours for seller ${sellerId}:`, error);
       throw error;
     }
   }

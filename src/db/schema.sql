@@ -48,6 +48,8 @@ CREATE TABLE IF NOT EXISTS Tour (
     itinerary JSONB,
     max_participants INTEGER NOT NULL,
     availability BOOLEAN DEFAULT true,
+    is_deleted BOOLEAN DEFAULT false,
+    deleted_at TIMESTAMPTZ DEFAULT NULL,
     embedding vector(768)
 );
 
@@ -203,6 +205,7 @@ CREATE INDEX IF NOT EXISTS idx_users_refresh_token ON Users(refresh_token);
 CREATE INDEX IF NOT EXISTS idx_tour_seller_id ON Tour(seller_id);
 CREATE INDEX IF NOT EXISTS idx_tour_region ON Tour(region);
 CREATE INDEX IF NOT EXISTS idx_tour_availability ON Tour(availability);
+CREATE INDEX IF NOT EXISTS idx_tour_is_deleted ON Tour(is_deleted);
 
 CREATE INDEX IF NOT EXISTS idx_departure_tour_id ON Departure(tour_id);
 CREATE INDEX IF NOT EXISTS idx_departure_start_date ON Departure(start_date);
