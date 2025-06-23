@@ -98,6 +98,11 @@ const router = express.Router();
  *           type: integer
  *           default: 3
  *         description: Number of days to search around exact date
+ *       - in: query
+ *         name: seller_id
+ *         schema:
+ *           type: integer
+ *         description: Filter by seller ID
  *     responses:
  *       200:
  *         description: Search results
