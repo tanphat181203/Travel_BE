@@ -71,4 +71,75 @@ const router = express.Router();
  */
 router.get('/', requestLogger, sellerController.getAllSellers);
 
+/**
+ * @swagger
+ * /public/sellers/{id}:
+ *   get:
+ *     tags:
+ *       - Public Sellers
+ *     summary: Get seller information by ID
+ *     description: Retrieve detailed information of a specific seller by their ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The seller ID
+ *     responses:
+ *       200:
+ *         description: Seller information retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 seller:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                     name:
+ *                       type: string
+ *                     avatar_url:
+ *                       type: string
+ *                       nullable: true
+ *                     phone_number:
+ *                       type: string
+ *                       nullable: true
+ *                     address:
+ *                       type: string
+ *                       nullable: true
+ *                     seller_description:
+ *                       type: string
+ *                       nullable: true
+ *                       description: Detailed description of the seller and their services
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
+ *       404:
+ *         description: Seller not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Seller not found
+ *       400:
+ *         description: Invalid seller ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Invalid seller ID
+ *       500:
+ *         description: Server error
+ */
+router.get('/:id', requestLogger, sellerController.getSellerById);
+
 export default router; 
