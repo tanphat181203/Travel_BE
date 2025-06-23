@@ -19,6 +19,57 @@ import {
   createPaginationMetadata,
 } from '../../utils/pagination.js';
 
+// Helper function to process successful VNPay payments and create invoices
+const handleSuccessfulVNPay = async (txnRef, amount) => {
+  const subscriptionId = parseInt(txnRef.split('-')[0], 10);
+  if (isNaN(subscriptionId)) {
+    logger.error(`Could not parse subscriptionId from txnRef: ${txnRef}`);
+    throw new Error('Invalid transaction reference');
+  }
+
+  const subscription = await SellerSubscription.findById(subscriptionId);
+  if (!subscription) {
+    logger.error(`Subscription not found for ID: ${subscriptionId}`);
+    throw new Error('Subscription not found');
+  }
+
+  if (subscription.status === 'active') {
+    logger.info(`Subscription ${subscriptionId} is already active.`);
+    return { success: true, subscription };
+  }
+
+  if (parseFloat(subscription.price) !== parseFloat(amount)) {
+    logger.error(
+      `Amount mismatch for transaction ${txnRef}: expected ${subscription.price}, got ${amount}`
+    );
+    throw new Error('Amount mismatch');
+  }
+
+  const existingInvoice =
+    await SubscriptionInvoice.findBySubscriptionId(subscriptionId);
+  if (!existingInvoice) {
+    const invoiceData = {
+      subscription_id: subscriptionId,
+      amount_due: subscription.price,
+      transaction_id: txnRef,
+      details: JSON.stringify({
+        payment_method: 'vnpay',
+        package_name: subscription.package_name,
+        duration_days: subscription.duration_days,
+        purchase_date: subscription.purchase_date.toISOString(),
+        payment_date: new Date().toISOString(),
+      }),
+    };
+    await SubscriptionInvoice.create(invoiceData);
+    logger.info(
+      `Created invoice for successful VNPay payment, subscription: ${subscriptionId}`
+    );
+  }
+
+  await SellerSubscription.updateStatus(subscriptionId, 'active');
+  return { success: true, subscription };
+};
+
 export const getSubscriptionPackages = async (req, res) => {
   try {
     const { page, limit, offset } = getPaginationParams(req.query);
@@ -129,7 +180,6 @@ export const createSubscriptionPayment = async (req, res) => {
       });
     }
 
-    // Check if the package exists
     const subscriptionPackage = await SubscriptionPackage.findById(package_id);
     if (!subscriptionPackage) {
       return res
@@ -143,14 +193,11 @@ export const createSubscriptionPayment = async (req, res) => {
         .json({ message: 'This subscription package is not available' });
     }
 
-    // Check if seller already has an active subscription
     const activeSubscription =
       await SellerSubscription.findActiveSubscriptionBySellerId(seller_id);
 
-    // Calculate expiry date
     let expiryDate;
     if (activeSubscription) {
-      // If there's an active subscription, extend from its expiry date
       expiryDate = new Date(activeSubscription.expiry_date);
       expiryDate.setDate(
         expiryDate.getDate() + subscriptionPackage.duration_days
@@ -159,14 +206,12 @@ export const createSubscriptionPayment = async (req, res) => {
         `Extending subscription from existing expiry date: ${activeSubscription.expiry_date} to ${expiryDate}`
       );
     } else {
-      // If no active subscription, start from today
       expiryDate = new Date();
       expiryDate.setDate(
         expiryDate.getDate() + subscriptionPackage.duration_days
       );
     }
 
-    // Create subscription record
     const subscriptionData = {
       seller_id,
       package_id,
@@ -177,23 +222,7 @@ export const createSubscriptionPayment = async (req, res) => {
 
     const subscription = await SellerSubscription.create(subscriptionData);
 
-    // Create invoice record
-    const invoiceData = {
-      subscription_id: subscription.subscription_id,
-      amount_due: subscriptionPackage.price,
-      details: JSON.stringify({
-        payment_method,
-        package_name: subscriptionPackage.package_name,
-        duration_days: subscriptionPackage.duration_days,
-        purchase_date: new Date().toISOString(),
-      }),
-    };
-
-    const invoice = await SubscriptionInvoice.create(invoiceData);
-
-    // Handle Stripe payment
     if (payment_method === 'stripe') {
-      // Create a checkout session with Stripe to get a payment URL
       const orderInfo = `Payment for subscription package: ${subscriptionPackage.package_name}`;
       const session = await createStripeCheckoutSession(
         subscriptionPackage.price,
@@ -201,37 +230,27 @@ export const createSubscriptionPayment = async (req, res) => {
         orderInfo,
         `${process.env.SELLER_URL}/subscription/success?payment_method=stripe&subscription_id=${subscription.subscription_id}`,
         `${process.env.SELLER_URL}/subscription/failed?payment_method=stripe&reason=cancelled&subscription_id=${subscription.subscription_id}`,
-        true // Set isSubscription to true
-      );
-
-      // Update invoice with transaction ID
-      await SubscriptionInvoice.updateTransactionId(
-        invoice.invoice_id,
-        session.id
+        true
       );
 
       logger.info(
-        `Created Stripe payment for subscription ${subscription.subscription_id}, invoice ID: ${invoice.invoice_id}, session id: ${session.id}`
+        `Created Stripe payment for subscription ${subscription.subscription_id}, session id: ${session.id}`
       );
 
       return res.status(200).json({
         message: 'Stripe payment initiated',
         paymentUrl: session.url,
         subscription_id: subscription.subscription_id,
-        invoice_id: invoice.invoice_id,
         transaction_id: session.id,
       });
     }
 
-    // Handle VNPay payment
-    // Get client IP address
     const ipAddr =
       req.headers['x-forwarded-for'] ||
       req.connection.remoteAddress ||
       req.socket.remoteAddress ||
       req.connection.socket.remoteAddress;
 
-    // Generate payment URL
     const orderInfo = `Payment for subscription package: ${subscriptionPackage.package_name}`;
     const { paymentUrl, txnRef } = generatePaymentUrl(
       subscriptionPackage.price,
@@ -241,18 +260,14 @@ export const createSubscriptionPayment = async (req, res) => {
       `${process.env.SERVER_URL}/api/seller/subscriptions/vnpay-return`
     );
 
-    // Update invoice with transaction ID
-    await SubscriptionInvoice.updateTransactionId(invoice.invoice_id, txnRef);
-
     logger.info(
-      `Created VNPay payment for subscription ${subscription.subscription_id}, invoice ID: ${invoice.invoice_id}`
+      `Created VNPay payment for subscription ${subscription.subscription_id}`
     );
 
     res.status(200).json({
       message: 'Payment initiated',
       paymentUrl,
       subscription_id: subscription.subscription_id,
-      invoice_id: invoice.invoice_id,
       transaction_id: txnRef,
     });
   } catch (error) {
@@ -263,7 +278,6 @@ export const createSubscriptionPayment = async (req, res) => {
 
 export const vnpayReturn = async (req, res) => {
   try {
-    // Verify the return URL
     const verify = verifyReturnUrl(req.query);
 
     if (!verify.isVerified) {
@@ -282,54 +296,17 @@ export const vnpayReturn = async (req, res) => {
       );
     }
 
-    // Extract transaction reference and amount
     const txnRef = req.query.vnp_TxnRef;
-    const amount = req.query.vnp_Amount / 100; // VNPay amount is in VND * 100
+    const amount = req.query.vnp_Amount / 100;
 
-    // Find the invoice by transaction ID
-    const invoice = await SubscriptionInvoice.findByTransactionId(txnRef);
-    if (!invoice) {
-      logger.error(`Invoice not found for transaction: ${txnRef}`);
-      return res.redirect(
-        `${process.env.SELLER_URL}/subscription/failed?payment_method=vnpay&reason=invoice_not_found`
-      );
-    }
-
-    // Verify amount
-    if (parseFloat(invoice.amount_due) !== parseFloat(amount)) {
-      logger.error(
-        `Amount mismatch for transaction ${txnRef}: expected ${invoice.amount_due}, got ${amount}`
-      );
-      return res.redirect(
-        `${process.env.SELLER_URL}/subscription/failed?payment_method=vnpay&reason=amount_mismatch`
-      );
-    }
-
-    // Update subscription status
-    await SellerSubscription.updateStatus(
-      invoice.subscription_id,
-      'active',
-      txnRef
-    );
-
-    // Update invoice details
-    let updatedDetails;
-    if (typeof invoice.details === 'string') {
-      updatedDetails = JSON.parse(invoice.details || '{}');
-    } else {
-      updatedDetails = invoice.details || {};
-    }
-    updatedDetails.payment_date = new Date().toISOString();
-    updatedDetails.transaction_id = txnRef;
-
-    await SubscriptionInvoice.updateTransactionId(invoice.invoice_id, txnRef);
+    const { subscription } = await handleSuccessfulVNPay(txnRef, amount);
 
     logger.info(
-      `Payment successful for subscription ${invoice.subscription_id}, transaction: ${txnRef}`
+      `Payment successful for subscription ${subscription.subscription_id}, transaction: ${txnRef}`
     );
 
     return res.redirect(
-      `${process.env.SELLER_URL}/subscription/success?payment_method=vnpay&subscription_id=${invoice.subscription_id}`
+      `${process.env.SELLER_URL}/subscription/success?payment_method=vnpay&subscription_id=${subscription.subscription_id}`
     );
   } catch (error) {
     logger.error(`Error processing VNPay return: ${error.message}`);
@@ -341,7 +318,6 @@ export const vnpayReturn = async (req, res) => {
 
 export const vnpayIPN = async (req, res) => {
   try {
-    // Verify the IPN call
     const verify = verifyIpnCall(req.query);
 
     if (!verify.isVerified) {
@@ -351,46 +327,19 @@ export const vnpayIPN = async (req, res) => {
       return res.status(200).json(getIpnResponse(false));
     }
 
-    // Extract transaction reference and amount
     const txnRef = req.query.vnp_TxnRef;
-    const amount = req.query.vnp_Amount / 100; // VNPay amount is in VND * 100
+    const amount = req.query.vnp_Amount / 100;
+    const responseCode = req.query.vnp_ResponseCode;
 
-    // Find the invoice by transaction ID
-    const invoice = await SubscriptionInvoice.findByTransactionId(txnRef);
-    if (!invoice) {
-      logger.error(`Invoice not found for transaction: ${txnRef}`);
-      return res.status(200).json(getErrorResponse());
+    if (responseCode !== '00') {
+        logger.warn(`VNPay IPN received a failed payment status: ${responseCode}`);
+        return res.status(200).json(getErrorResponse());
     }
 
-    // Verify amount
-    if (parseFloat(invoice.amount_due) !== parseFloat(amount)) {
-      logger.error(
-        `Amount mismatch for transaction ${txnRef}: expected ${invoice.amount_due}, got ${amount}`
-      );
-      return res.status(200).json(getErrorResponse());
-    }
-
-    // Update subscription status
-    await SellerSubscription.updateStatus(
-      invoice.subscription_id,
-      'active',
-      txnRef
-    );
-
-    // Update invoice details
-    let updatedDetails;
-    if (typeof invoice.details === 'string') {
-      updatedDetails = JSON.parse(invoice.details || '{}');
-    } else {
-      updatedDetails = invoice.details || {};
-    }
-    updatedDetails.payment_date = new Date().toISOString();
-    updatedDetails.transaction_id = txnRef;
-
-    await SubscriptionInvoice.updateTransactionId(invoice.invoice_id, txnRef);
+    await handleSuccessfulVNPay(txnRef, amount);
 
     logger.info(
-      `IPN confirmed payment for subscription ${invoice.subscription_id}, transaction: ${txnRef}`
+      `IPN confirmed payment for subscription, transaction: ${txnRef}`
     );
 
     return res.status(200).json(getIpnResponse(true));
@@ -431,10 +380,6 @@ export const stripeWebhook = async (req, res) => {
   const signature = req.headers['stripe-signature'];
 
   try {
-    // Log the raw request body for debugging
-    logger.info(`Processing Stripe webhook with signature: ${signature}`);
-
-    // Ensure we have a raw body buffer
     if (!Buffer.isBuffer(req.body)) {
       logger.error('Request body is not a Buffer as expected');
       return res.status(400).json({
@@ -443,132 +388,92 @@ export const stripeWebhook = async (req, res) => {
       });
     }
 
-    // For Stripe webhooks, req.body is a raw buffer that we need to pass directly to the constructStripeEvent function for signature verification
     const event = constructStripeEvent(
       req.body,
       signature,
       process.env.STRIPE_SELLER_WEBHOOK_SECRET
     );
 
-    // Handle the event based on its type
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;
 
-      // Check if this is a subscription payment
       if (session.metadata.subscription_id) {
         const subscriptionId = session.metadata.subscription_id;
+        const transactionId = session.id;
+        const amountPaid = session.amount_total / 100;
 
         logger.info(
-          `Stripe checkout session completed for subscription ${subscriptionId}, session id: ${session.id}`
+          `Stripe checkout session completed for subscription ${subscriptionId}, session id: ${transactionId}`
         );
-
-        // Find the subscription invoice by transaction ID
-        const invoice = await SubscriptionInvoice.findByTransactionId(
-          session.id
-        );
-        if (!invoice) {
-          logger.error(
-            `Subscription invoice not found for session id: ${session.id}`
-          );
-          return res
-            .status(400)
-            .json({ error: 'Subscription invoice not found' });
+        
+        const subscription = await SellerSubscription.findById(subscriptionId);
+        if (!subscription) {
+            logger.error(`Subscription not found for ID: ${subscriptionId}`);
+            return res.status(400).json({ error: 'Subscription not found' });
         }
 
-        // Update subscription status
-        await SellerSubscription.updateStatus(
-          invoice.subscription_id,
-          'active',
-          session.id
-        );
-
-        // Update invoice details if needed
-        let updatedDetails;
-        if (typeof invoice.details === 'string') {
-          updatedDetails = JSON.parse(invoice.details || '{}');
-        } else {
-          updatedDetails = invoice.details || {};
+        if (subscription.status === 'active') {
+            logger.info(`Subscription ${subscriptionId} is already active.`);
+            return res.status(200).json({ received: true });
         }
-        updatedDetails.payment_date = new Date().toISOString();
-        updatedDetails.transaction_id = session.id;
+        
+        const existingInvoice = await SubscriptionInvoice.findBySubscriptionId(subscriptionId);
+        if (!existingInvoice) {
+            const invoiceData = {
+              subscription_id: subscriptionId,
+              amount_due: amountPaid,
+              transaction_id: transactionId,
+              details: JSON.stringify({
+                payment_method: 'stripe',
+                package_name: subscription.package_name,
+                duration_days: subscription.duration_days,
+                purchase_date: subscription.purchase_date.toISOString(),
+                payment_date: new Date().toISOString(),
+              }),
+            };
+            await SubscriptionInvoice.create(invoiceData);
+            logger.info(`Created invoice for successful Stripe payment, subscription: ${subscriptionId}`);
+        }
+
+        await SellerSubscription.updateStatus(subscriptionId, 'active');
 
         logger.info(
-          `Webhook confirmed Stripe payment for subscription ${invoice.subscription_id}`
+          `Webhook confirmed Stripe payment for subscription ${subscriptionId}`
         );
       } else {
         logger.warn(
           `Stripe checkout session completed but no subscription_id found in metadata: ${session.id}`
         );
       }
-    }
-    // Handle payment_intent events for backward compatibility
-    else if (event.type === 'payment_intent.succeeded') {
-      const paymentIntent = event.data.object;
-
-      // Check if this is a subscription payment
-      if (paymentIntent.metadata.subscription_id) {
-        const subscriptionId = paymentIntent.metadata.subscription_id;
-
-        logger.info(
-          `Stripe payment intent succeeded for subscription ${subscriptionId}, payment intent: ${paymentIntent.id}`
-        );
-
-        // Find the subscription invoice by transaction ID
-        const invoice = await SubscriptionInvoice.findByTransactionId(
-          paymentIntent.id
-        );
-        if (invoice) {
-          // Update subscription status
-          await SellerSubscription.updateStatus(
-            invoice.subscription_id,
-            'active',
-            paymentIntent.id
-          );
-
-          logger.info(
-            `Webhook confirmed Stripe payment for subscription ${invoice.subscription_id}`
-          );
-        }
-      }
-    }
-    // Handle payment failures and session expirations
-    else if (
+    } else if (
       event.type === 'payment_intent.payment_failed' ||
       event.type === 'checkout.session.expired'
     ) {
       const object = event.data.object;
       const objectId = object.id;
 
-      // Check if this is a subscription payment
       if (object.metadata.subscription_id) {
         const subscriptionId = object.metadata.subscription_id;
 
         logger.warn(
           `Stripe payment failed for subscription ${subscriptionId}, id: ${objectId}`
         );
-
-        // Find the subscription by transaction ID
-        const invoice = await SubscriptionInvoice.findByTransactionId(objectId);
-        if (invoice) {
-          // Update subscription status to failed
+        
+        const subscription = await SellerSubscription.findById(subscriptionId);
+        if (subscription && subscription.status === 'pending') {
           await SellerSubscription.updateStatus(
-            invoice.subscription_id,
-            'failed',
-            objectId
+            subscriptionId,
+            'failed'
           );
         }
       }
     }
 
-    // Return a 200 response to acknowledge receipt of the event
     res.status(200).json({ received: true });
   } catch (error) {
     logger.error(`Error processing Stripe webhook: ${error.message}`);
     logger.error(`Stripe webhook error details: ${error.stack}`);
-
-    // Log additional information about the request
     logger.error(`Stripe webhook headers: ${JSON.stringify(req.headers)}`);
-
     res.status(400).json({
       error: error.message,
       tip: "Make sure you're using the correct webhook secret and sending the raw request body",
