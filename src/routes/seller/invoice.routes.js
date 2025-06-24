@@ -150,4 +150,41 @@ router.get(
   invoiceController.viewInvoiceHtmlByBookingId
 );
 
+/**
+ * @swagger
+ * /seller/invoices/{id}/send-email:
+ *   post:
+ *     tags:
+ *       - Seller - Invoice Management
+ *     summary: Send invoice via email
+ *     description: Send an invoice as PDF attachment to the user's email
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Invoice ID
+ *     responses:
+ *       200:
+ *         description: Email sent successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Not authorized to access this invoice
+ *       404:
+ *         description: Invoice not found
+ *       500:
+ *         description: Server error sending email
+ */
+router.post(
+  '/:id/send-email',
+  authenticateJWT,
+  requireSeller,
+  requestLogger,
+  invoiceController.sendInvoiceByEmail
+);
+
 export default router;

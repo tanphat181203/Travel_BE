@@ -10,6 +10,16 @@ export const generateInvoiceTemplate = (
       ? JSON.parse(invoice.details)
       : invoice.details || {};
 
+  // Extract contact_info and passengers from booking if available
+  const contactInfo = booking.contact_info || details.contact_info || {};
+  const passengers = booking.passengers || details.passengers || [];
+  const orderNotes = booking.order_notes || details.order_notes || {};
+      
+  // Get price information from details if available, otherwise from booking
+  const priceAdult = details.price_adult || booking.price_adult || 0;
+  const priceChild120140 = details.price_child_120_140 || booking.price_child_120_140 || 0;
+  const priceChild100120 = details.price_child_100_120 || booking.price_child_100_120 || 0;
+
   const formatDate = (dateString) => {
     const date = new Date(dateString);
 
@@ -331,6 +341,13 @@ export const generateInvoiceTemplate = (
           color: var(--dark-color);
         }
 
+        /* Text overflow handling */
+        .transaction-id {
+          max-width: 300px;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+        }
+
         /* Print Optimization */
         @media print {
           body {
@@ -384,16 +401,16 @@ export const generateInvoiceTemplate = (
           <div class="billing-info">
             <div class="section-title">Thông Tin Người Đặt</div>
             ${
-              details.contact_info
+              contactInfo && Object.keys(contactInfo).length > 0
                 ? `
-                <p><strong>Họ và tên:</strong> <span>${details.contact_info.fullname}</span></p>
-                <p><strong>Email:</strong> <span>${details.contact_info.email}</span></p>
-                <p><strong>Điện thoại:</strong> <span>${details.contact_info.phone}</span></p>
-                <p><strong>Địa chỉ:</strong> <span>${details.contact_info.address}</span></p>
+                <p><strong>Họ và tên:</strong> <span>${contactInfo.fullname || 'N/A'}</span></p>
+                <p><strong>Email:</strong> <span>${contactInfo.email || 'N/A'}</span></p>
+                <p><strong>Điện thoại:</strong> <span>${contactInfo.phone || 'N/A'}</span></p>
+                <p><strong>Địa chỉ:</strong> <span>${contactInfo.address || 'N/A'}</span></p>
               `
                 : `
-                <p><strong>Họ và tên:</strong> <span>${user.name}</span></p>
-                <p><strong>Email:</strong> <span>${user.email}</span></p>
+                <p><strong>Họ và tên:</strong> <span>${user.name || 'N/A'}</span></p>
+                <p><strong>Email:</strong> <span>${user.email || 'N/A'}</span></p>
                 <p><strong>Điện thoại:</strong> <span>${
                   user.phone_number || 'N/A'
                 }</span></p>
@@ -436,9 +453,9 @@ export const generateInvoiceTemplate = (
             <tr>
               <td>Người lớn</td>
               <td>${booking.num_adults}</td>
-              <td>${formatCurrency(parseFloat(booking.price_adult))}</td>
+              <td>${formatCurrency(parseFloat(priceAdult))}</td>
               <td class="text-right">${formatCurrency(
-                booking.num_adults * parseFloat(booking.price_adult)
+                booking.num_adults * parseFloat(priceAdult)
               )}</td>
             </tr>
             `
@@ -451,11 +468,11 @@ export const generateInvoiceTemplate = (
               <td>Trẻ em (120-140cm)</td>
               <td>${booking.num_children_120_140}</td>
               <td>${formatCurrency(
-                parseFloat(booking.price_child_120_140)
+                parseFloat(priceChild120140)
               )}</td>
               <td class="text-right">${formatCurrency(
                 booking.num_children_120_140 *
-                  parseFloat(booking.price_child_120_140)
+                  parseFloat(priceChild120140)
               )}</td>
             </tr>
             `
@@ -468,11 +485,11 @@ export const generateInvoiceTemplate = (
               <td>Trẻ em (100-120cm)</td>
               <td>${booking.num_children_100_120}</td>
               <td>${formatCurrency(
-                parseFloat(booking.price_child_100_120)
+                parseFloat(priceChild100120)
               )}</td>
               <td class="text-right">${formatCurrency(
                 booking.num_children_100_120 *
-                  parseFloat(booking.price_child_100_120)
+                  parseFloat(priceChild100120)
               )}</td>
             </tr>
             `
@@ -526,7 +543,7 @@ export const generateInvoiceTemplate = (
 
         <!-- Passenger Information -->
         ${
-          details.passengers && details.passengers.length > 0
+          passengers && passengers.length > 0
             ? `
           <div class="passenger-info">
             <div class="section-title">Thông Tin Hành Khách</div>
@@ -540,17 +557,17 @@ export const generateInvoiceTemplate = (
                 </tr>
               </thead>
               <tbody>
-                ${details.passengers
+                ${passengers
                   .map(
                     (passenger) => `
                   <tr>
-                    <td>${passenger.fullname}</td>
+                    <td>${passenger.fullname || 'N/A'}</td>
                     <td>${
                       passenger.gender === 'male'
                         ? 'Nam'
                         : passenger.gender === 'female'
                         ? 'Nữ'
-                        : passenger.gender
+                        : passenger.gender || 'N/A'
                     }</td>
                     <td>${new Date(passenger.birthday).toLocaleDateString(
                       'vi-VN'
@@ -564,7 +581,7 @@ export const generateInvoiceTemplate = (
                         ? 'Trẻ em 100-120cm'
                         : passenger.ticket_type === 'baby'
                         ? 'Em bé'
-                        : passenger.ticket_type
+                        : passenger.ticket_type || 'N/A'
                     }</td>
                   </tr>
                 `
@@ -579,44 +596,44 @@ export const generateInvoiceTemplate = (
 
         <!-- Special Requirements -->
         ${
-          details.order_notes
+          orderNotes && Object.keys(orderNotes).length > 0
             ? `
           <div class="special-requirements">
             <div class="section-title">Yêu Cầu Đặc Biệt</div>
             <ul>
               ${
-                details.order_notes.smoking
+                orderNotes.smoking
                   ? '<li>Yêu cầu phòng hút thuốc</li>'
                   : ''
               }
               ${
-                details.order_notes.vegetarian
+                orderNotes.vegetarian
                   ? '<li>Yêu cầu thức ăn chay</li>'
                   : ''
               }
               ${
-                details.order_notes.high_floor
+                orderNotes.high_floor
                   ? '<li>Yêu cầu phòng tầng cao</li>'
                   : ''
               }
               ${
-                details.order_notes.pregnant
+                orderNotes.pregnant
                   ? '<li>Có người mang thai</li>'
                   : ''
               }
               ${
-                details.order_notes.disabled
+                orderNotes.disabled
                   ? '<li>Có người khuyết tật</li>'
                   : ''
               }
               ${
-                details.order_notes.invoice_needed
+                orderNotes.invoice_needed
                   ? '<li>Yêu cầu xuất hóa đơn</li>'
                   : ''
               }
             </ul>
             ${
-              !Object.values(details.order_notes).some((value) => value)
+              !Object.values(orderNotes).some((value) => value)
                 ? '<p>Không có yêu cầu đặc biệt</p>'
                 : ''
             }
@@ -640,7 +657,7 @@ export const generateInvoiceTemplate = (
           </p>
           ${
             details.transaction_id
-              ? `<p><strong>Mã giao dịch:</strong> ${details.transaction_id}</p>`
+              ? `<p><strong>Mã giao dịch:</strong> <span class="transaction-id">${details.transaction_id}</span></p>`
               : ''
           }
           <p><strong>Ngày thanh toán:</strong> ${formatDate(

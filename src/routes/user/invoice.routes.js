@@ -187,4 +187,78 @@ router.get(
   invoiceController.viewInvoiceHtmlByBookingId
 );
 
+/**
+ * @swagger
+ * /user/invoices/{id}/send-email:
+ *   post:
+ *     tags:
+ *       - User - Invoice Management
+ *     summary: Send invoice via email
+ *     description: Send an invoice as PDF attachment to the user's email
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Invoice ID
+ *     responses:
+ *       200:
+ *         description: Email sent successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Not authorized to access this invoice
+ *       404:
+ *         description: Invoice not found
+ *       500:
+ *         description: Server error sending email
+ */
+router.post(
+  '/:id/send-email',
+  authenticateJWT,
+  requireUser,
+  requestLogger,
+  invoiceController.sendInvoiceByEmail
+);
+
+/**
+ * @swagger
+ * /user/invoices/booking/{booking_id}/send-email:
+ *   post:
+ *     tags:
+ *       - User - Invoice Management
+ *     summary: Send invoice via email by booking ID
+ *     description: Send an invoice as PDF attachment to the user's email using booking ID
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: booking_id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Booking ID
+ *     responses:
+ *       200:
+ *         description: Email sent successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Not authorized to access this booking
+ *       404:
+ *         description: Booking or invoice not found
+ *       500:
+ *         description: Server error sending email
+ */
+router.post(
+  '/booking/:booking_id/send-email',
+  authenticateJWT,
+  requireUser,
+  requestLogger,
+  invoiceController.sendInvoiceByBookingId
+);
+
 export default router;

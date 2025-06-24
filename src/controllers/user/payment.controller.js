@@ -22,6 +22,8 @@ import {
 } from '../../services/payment.service.js';
 import logger from '../../utils/logger.js';
 import { trackTourBooking } from '../../services/history.service.js';
+import { generateInvoicePdf } from '../../services/invoice.service.js';
+import { sendHtmlEmail } from '../../services/email.service.js';
 
 export const createPayment = async (req, res) => {
   try {
@@ -253,6 +255,117 @@ export const vnpayReturn = async (req, res) => {
   }
 };
 
+const sendInvoiceByEmail = async (bookingId, userId) => {
+  try {
+    // Get invoice data
+    const invoice = await Invoice.findByBookingId(bookingId);
+    if (!invoice) {
+      logger.error(`Invoice not found for booking ${bookingId}`);
+      return;
+    }
+    
+    // Get user data
+    const user = await User.findById(userId);
+    if (!user) {
+      logger.error(`User not found for ID ${userId}`);
+      return;
+    }
+    
+    // Parse invoice details
+    const details = typeof invoice.details === 'string'
+      ? JSON.parse(invoice.details)
+      : invoice.details || {};
+    
+    // Add booking details from the invoice
+    const booking = {
+      booking_id: invoice.booking_id,
+      user_id: invoice.user_id,
+      departure_id: invoice.departure_id,
+      num_adults: invoice.num_adults,
+      num_children_120_140: invoice.num_children_120_140,
+      num_children_100_120: invoice.num_children_100_120,
+      start_date: invoice.start_date,
+      // Use price data from details or from invoice
+      price_adult: details.price_adult || invoice.price_adult,
+      price_child_120_140: details.price_child_120_140 || invoice.price_child_120_140,
+      price_child_100_120: details.price_child_100_120 || invoice.price_child_100_120
+    };
+      
+    // Add JSON data from invoice details
+    if (details.contact_info) booking.contact_info = details.contact_info;
+    if (details.passengers) booking.passengers = details.passengers;
+    if (details.order_notes) booking.order_notes = details.order_notes;
+
+    const tour = {
+      tour_id: invoice.tour_id,
+      title: invoice.tour_title,
+      departure_location: invoice.departure_location,
+      seller_id: invoice.seller_id,
+      duration: invoice.duration,
+    };
+
+    const userData = {
+      id: invoice.user_id,
+      name: invoice.user_name,
+      email: invoice.user_email,
+      phone_number: invoice.user_phone,
+      address: invoice.user_address,
+    };
+
+    const seller = {
+      id: invoice.seller_id,
+      name: invoice.seller_name,
+      email: invoice.seller_email,
+      phone_number: invoice.seller_phone,
+      address: invoice.seller_address,
+      avatar_url: invoice.seller_avatar_url,
+    };
+
+    // Generate PDF
+    const pdfBuffer = await generateInvoicePdf(invoice, booking, tour, userData, seller);
+    
+    // Send email with PDF attachment
+    const emailSubject = `Hóa đơn cho đơn đặt tour #${booking.booking_id}`;
+    const emailHtml = `
+      <h1>Cảm ơn bạn đã đặt tour!</h1><br>
+      <p>Xin chào <strong>${userData.name}</strong>,</p>
+      <p>Cảm ơn bạn đã đặt tour "<strong>${tour.title}</strong>" của chúng tôi.</p>
+      <p>Chúng tôi đã đính kèm hóa đơn chi tiết trong email này.</p>
+      <p><strong>Chi tiết đơn hàng:</strong></p>
+      <ul>
+        <li><strong>Mã đơn hàng:</strong> ${booking.booking_id}</li>
+        <li><strong>Tour:</strong> ${tour.title}</li>
+        <li><strong>Ngày khởi hành:</strong> ${new Date(booking.start_date).toLocaleDateString('vi-VN')}</li>
+        <li><strong>Tổng thanh toán:</strong> ${(invoice.amount_due || 0).toLocaleString('vi-VN')} VND</li>
+      </ul>
+      <p>Nếu bạn có bất kỳ câu hỏi nào, vui lòng liên hệ với chúng tôi.</p>
+      <p>Trân trọng,<br>
+      Đội ngũ ${seller.name}<br>
+      Hotline: ${seller.phone_number}<br>
+      Địa chỉ: ${seller.address}</p>
+    `;
+    
+    await sendHtmlEmail(
+      userData.email,
+      emailSubject,
+      emailHtml,
+      [
+        {
+          filename: `Hoa-don-${booking.booking_id}.pdf`,
+          content: pdfBuffer,
+          contentType: 'application/pdf'
+        }
+      ]
+    );
+    
+    logger.info(`Sent invoice email for booking ${bookingId} to ${userData.email}`);
+    return true;
+  } catch (error) {
+    logger.error(`Error sending invoice email: ${error.message}`);
+    return false;
+  }
+};
+
 export const vnpayIPN = async (req, res) => {
   try {
     // Verify the IPN call
@@ -321,6 +434,11 @@ export const vnpayIPN = async (req, res) => {
     if (booking.user_id && booking.tour_id) {
       trackTourBooking(booking.user_id, booking.tour_id).catch(error => {
         logger.error(`Error tracking tour booking: ${error.message}`);
+      });
+      
+      // Send invoice by email
+      sendInvoiceByEmail(checkout.booking_id, booking.user_id).catch(error => {
+        logger.error(`Error sending invoice email: ${error.message}`);
       });
     }
 
@@ -434,6 +552,11 @@ export const stripeWebhook = async (req, res) => {
           trackTourBooking(booking.user_id, booking.tour_id).catch(error => {
             logger.error(`Error tracking tour booking: ${error.message}`);
           });
+          
+          // Send invoice by email
+          sendInvoiceByEmail(checkout.booking_id, booking.user_id).catch(error => {
+            logger.error(`Error sending invoice email: ${error.message}`);
+          });
         }
 
         logger.info(
@@ -497,6 +620,11 @@ export const stripeWebhook = async (req, res) => {
         if (booking.user_id && booking.tour_id) {
           trackTourBooking(booking.user_id, booking.tour_id).catch(error => {
             logger.error(`Error tracking tour booking: ${error.message}`);
+          });
+          
+          // Send invoice by email
+          sendInvoiceByEmail(checkout.booking_id, booking.user_id).catch(error => {
+            logger.error(`Error sending invoice email: ${error.message}`);
           });
         }
 
@@ -749,6 +877,11 @@ export const confirmMobilePayment = async (req, res) => {
       if (booking.user_id && booking.tour_id) {
         trackTourBooking(booking.user_id, booking.tour_id).catch((error) => {
           logger.error(`Error tracking tour booking: ${error.message}`);
+        });
+        
+        // Send invoice by email
+        sendInvoiceByEmail(checkout.booking_id, booking.user_id).catch(error => {
+          logger.error(`Error sending invoice email: ${error.message}`);
         });
       }
 
