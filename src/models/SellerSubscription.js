@@ -93,8 +93,8 @@ class SellerSubscription {
     }
   }
 
-  static async findActiveSubscriptionBySellerId(sellerId) {
-    const query = `
+  static async findActiveSubscriptionBySellerId(sellerId, limit, offset) {
+    const baseQuery = `
       SELECT ss.*, sp.package_name, sp.price, sp.duration_days
       FROM SellerSubscription ss
       JOIN SubscriptionPackage sp ON ss.package_id = sp.package_id
@@ -102,12 +102,32 @@ class SellerSubscription {
       AND ss.status = 'active'
       AND ss.expiry_date > NOW()
       ORDER BY ss.expiry_date DESC
-      LIMIT 1
+    `;
+
+    const countQuery = `
+      SELECT COUNT(*)
+      FROM SellerSubscription ss
+      WHERE ss.seller_id = $1
+      AND ss.status = 'active'
+      AND ss.expiry_date > NOW()
     `;
 
     try {
-      const result = await pool.query(query, [sellerId]);
-      return result.rows[0];
+      const countResult = await pool.query(countQuery, [sellerId]);
+      const totalItems = parseInt(countResult.rows[0].count);
+
+      let result;
+      if (limit && offset !== undefined) {
+        const paginatedQuery = `${baseQuery} LIMIT $2 OFFSET $3`;
+        result = await pool.query(paginatedQuery, [sellerId, limit, offset]);
+      } else {
+        result = await pool.query(baseQuery, [sellerId]);
+      }
+
+      return {
+        subscriptions: result.rows,
+        totalItems
+      };
     } catch (error) {
       logger.error(
         `Error finding active subscription for seller: ${error.message}`

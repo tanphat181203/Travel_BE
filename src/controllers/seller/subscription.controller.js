@@ -145,19 +145,28 @@ export const getSellerSubscriptions = async (req, res) => {
 export const getActiveSubscription = async (req, res) => {
   try {
     const sellerId = req.userId;
-    const subscription =
-      await SellerSubscription.findActiveSubscriptionBySellerId(sellerId);
+    const { page, limit, offset } = getPaginationParams(req.query);
 
-    if (!subscription) {
+    const { subscriptions, totalItems } =
+      await SellerSubscription.findActiveSubscriptionBySellerId(sellerId, limit, offset);
+
+    if (!subscriptions || subscriptions.length === 0) {
       return res.status(404).json({
         message: 'No active subscription found',
         hasActiveSubscription: false,
       });
     }
 
+    const pagination = createPaginationMetadata(page, limit, totalItems);
+
+    logger.info(
+      `Retrieved ${subscriptions.length} active subscriptions for seller ${sellerId} (page ${page})`
+    );
+
     res.status(200).json({
-      subscription,
+      subscriptions,
       hasActiveSubscription: true,
+      pagination,
     });
   } catch (error) {
     logger.error(`Error getting active subscription: ${error.message}`);
@@ -193,17 +202,18 @@ export const createSubscriptionPayment = async (req, res) => {
         .json({ message: 'This subscription package is not available' });
     }
 
-    const activeSubscription =
+    const { subscriptions } =
       await SellerSubscription.findActiveSubscriptionBySellerId(seller_id);
 
     let expiryDate;
-    if (activeSubscription) {
-      expiryDate = new Date(activeSubscription.expiry_date);
+    if (subscriptions && subscriptions.length > 0) {
+      const mostRecentSubscription = subscriptions[0];
+      expiryDate = new Date(mostRecentSubscription.expiry_date);
       expiryDate.setDate(
         expiryDate.getDate() + subscriptionPackage.duration_days
       );
       logger.info(
-        `Extending subscription from existing expiry date: ${activeSubscription.expiry_date} to ${expiryDate}`
+        `Extending subscription from existing expiry date: ${mostRecentSubscription.expiry_date} to ${expiryDate}`
       );
     } else {
       expiryDate = new Date();
